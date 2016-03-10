@@ -1,0 +1,7 @@
+#!/bin/tcsh
+
+setenv LC_ALL "C"
+set path = `echo $path | tr ' ' '\n' | grep -v '/at570/'`
+set path = ( ./code/code.main $path )
+
+

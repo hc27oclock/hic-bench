@@ -1,0 +1,35 @@
+#!/bin/tcsh
+source ./code/code.main/custom-tcshrc         # customize shell environment
+
+##
+## USAGE: scripts-read-job-vars BRANCH-DIR SAMPLES VARIABLE-NAMES
+##
+
+# process command-line inputs
+if ($#argv != 3) then
+  grep '^##' $0
+  exit
+endif
+
+set branch = $1
+set samples = ($2)
+set vars = ($3)
+
+# determine input directories
+set inpdirs = `echo "$branch\t$samples" | tools-key-expand | tr '\t' '/'`
+
+# read variables
+foreach name ($vars)
+  set value = `cat $inpdirs[1]/job.vars.tsv | grep "^$name	" | cut -f2`
+  foreach inpdir ($inpdirs)
+    set value2 = `cat $inpdir/job.vars.tsv | grep "^$name	" | cut -f2`
+    if ("$value2" != "$value") then
+      scripts-send2err "Error: [scripts-read-job-vars] values do not match across input samples."
+    endif
+  end
+  scripts-send2err "$name = $value"
+  set $name = $value
+end
+
+
+

@@ -1,0 +1,42 @@
+#!/bin/tcsh
+
+##
+## USAGE: pipeline-new-analysis PIPELINE-NAME NEW-ANALYSIS-DIR [SYMLINK-CODE=false]
+##
+
+if ($#argv < 2) then
+  grep '^##' $0
+  exit
+endif
+
+set pipeline_name = $1
+set analysis_dir = $2
+set symlink = $3
+
+mkdir -p $analysis_dir
+
+set repo_code_dir = `readlink -f $0 | sed 's/\/[^/]\+$//'`/..
+
+# copy pipeline structure to new analysis directory
+echo "Copying pipeline structure and code into $analysis_dir..."
+set pipeline_dir = $repo_code_dir/../pipelines/$pipeline_name
+set pipeline_dir = `echo $pipeline_dir | sed 's/[/]\+$//'`    # remove trailing '/'
+rsync -auv --exclude=results $pipeline_dir/ $analysis_dir
+
+# create a copy OR symbolic link to the code
+cd $analysis_dir
+rm -f code
+if ($symlink == 'true') then
+  ln -s $repo_code_dir/code.$pipeline_name code
+else
+  rsync -auv --exclude=src $repo_code_dir/ code.repo
+  ln -s code.repo/code.$pipeline_name code
+endif
+
+# create symbolic link to data repository (genomes, etc)
+rm -f data
+ln -s $pipeline_dir/data
+
+
+
+

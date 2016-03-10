@@ -1,0 +1,20 @@
+#!/bin/tcsh
+source ./code/code.main/custom-tcshrc      # customize shell environment
+
+##
+## USAGE: scripts-create-path FILE/PATH
+##
+
+if ($#argv != 1) then
+  grep '^##' $0
+  exit
+endif
+
+set f = $1
+
+set D = `echo $f | sed 's/\/[^/]\+$//'`
+
+mkdir -p $D
+
+
+

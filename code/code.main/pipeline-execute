@@ -1,0 +1,17 @@
+#!/bin/tcsh
+source ./code/code.main/custom-tcshrc      # customize shell environment
+
+##
+## USAGE: pipeline-execute PROJECT-NAME E-MAIL
+##
+
+if ($#argv != 2) then
+  grep '^##' $0
+  exit
+endif
+
+set project = $1
+set email = $2
+
+qsub -cwd -m be -M $email -N $project ./run
+

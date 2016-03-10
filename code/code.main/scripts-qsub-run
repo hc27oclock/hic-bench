@@ -1,0 +1,38 @@
+#!/bin/tcsh
+#$ -S /bin/tcsh
+source ./code/code.main/custom-tcshrc    # customize shell environment
+
+##
+## USAGE: scripts-qsub-run JOB-PREFIX N-THREADS MEMORY SCRIPT-PATH ARGS ...
+##
+
+if ($#argv < 4) then
+  grep '^##' $0
+  exit
+endif
+
+set jpref = $1
+set nthreads = $2
+set mem = $3
+set prog = $4
+shift
+shift
+shift
+shift
+
+if (-e $jpref.sh) then
+  scripts-send2err "Error: [scripts-qsubmem-run] $jpref.sh already exists, cannot overwrite."
+  exit 1
+endif
+
+set tmp_resources = `echo 10000/$nthreads | bc`                                     # /tmp space per thread in Mbytes
+set qsub_params = "-l tmp_free=${tmp_resources}M -l tmp_token=${tmp_resources}M"
+ 
+scripts-print-cmdline $prog $argv:q >! $jpref.sh
+qsub -cwd $qsub_params -l mem_free=$mem -l h_vmem=$mem -l mem_token=$mem -o :$jpref.out -e :$jpref.err -pe threaded $nthreads $jpref.sh >! $jpref.jid
+cat $jpref.jid | cut -d' ' -f3
+
+
+
+
+

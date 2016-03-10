@@ -1,0 +1,18 @@
+#!/bin/tcsh
+source ./code/code.main/custom-tcshrc         # customize shell environment
+
+##
+## USAGE: scripts-send2err <INPUT>|INPUT
+##
+
+if ($#argv == 0) then
+  set t = `scripts-create-temp`
+  cat >! $t
+  sh -c "cat $t 1>&2"
+  rm -f $t
+else
+  set x = "echo $1 1>&2"
+  sh -c "$x"
+endif
+
+

@@ -1,0 +1,19 @@
+#!/bin/tcsh -f
+
+##
+## USAGE: scripts-create-temp [DIRECTORY]
+##
+
+if ($#argv > 1) then
+  usage $0
+  exit
+endif
+
+set outdir = $1
+
+if ($outdir == '') then
+  mktemp _tmp.XXXXXXXX
+else
+  echo $outdir/`cd $outdir; mktemp _tmp.XXXXXXXX`
+endif
+

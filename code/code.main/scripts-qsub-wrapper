@@ -1,0 +1,42 @@
+#!/bin/tcsh
+#$ -S /bin/tcsh
+source ./code/code.main/custom-tcshrc     # shell settings
+
+##
+## USAGE: scripts-qsub-wrapper THREADS[,MEMORY] SCRIPT-PATH OUTPUT-DIR ARGS ...
+##
+
+if ($#argv < 3) then
+  grep '^##' $0
+  exit
+endif
+
+set resources = $1
+set prog = `which $2`
+set out = $3
+shift
+shift
+
+if (-e $out) then
+  scripts-send2err "[scripts-qsub-wrapper] Directory \'$out\' exists, skipping..."
+  exit 1
+endif
+
+set nthreads = `echo $resources, | cut -d',' -f1`
+set mem = `echo $resources, | cut -d',' -f2`
+set tmp_resources = `echo 10000/$nthreads | bc`                                     # /tmp space per thread in Mbytes
+set qsub_params = "-l tmp_free=${tmp_resources}M -l tmp_token=${tmp_resources}M"
+
+scripts-send2err "[scripts-qsub-wrapper] Generating results in directory \'$out\'..."
+if (-e $out) rm -rf $out
+scripts-create-path $out/ 
+set pref = $out/job
+scripts-print-cmdline $prog $argv:q >! $pref.sh
+if ("$mem" == "") then
+  qsub -cwd $qsub_params -o :$pref.out -e :$pref.err -pe threaded $nthreads ./$pref.sh >! $pref.id
+else
+  qsub -cwd $qsub_params -l mem_free=$mem -l h_vmem=$mem -l mem_token=$mem -o :$pref.out -e :$pref.err -pe threaded $nthreads ./$pref.sh >! $pref.id
+endif  
+cat $pref.id | cut -d' ' -f3                                                                 # TODO: is there a better method to obtain job id?
+
+
