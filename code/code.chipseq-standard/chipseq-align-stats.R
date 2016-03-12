@@ -105,7 +105,7 @@ Raw_Reads_Matrix_matrix<-structure(c(1L, 2L, 2L, 2L, 2L, 2L, 3L, 3L, 3L, 3L, 3L,
 
 # calculate some values for the figure margins
 # based on the nchar() of the longest rowname, divided by a value
-mar_divisor<-2.5
+mar_divisor<-2.0 # # smaller number = larger margin ; might have to adjust this manually per-project
 mar_widthLeft<-signif(
   max(4.1,
       max(nchar(row.names(AlignmentStats)))/mar_divisor),
