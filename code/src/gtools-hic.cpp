@@ -414,7 +414,7 @@ void RunFilter(char **args, int argn, char *ref_reg_file, char *stats_file)
       read1_5p.ModifyPos("5p",0);
       GenomicInterval read2_5p = p.r[1]->I.front();
       read2_5p.ModifyPos("5p",0);
-      bool duplicate = IsDuplicate(&read1_5p,&read2_5p);
+      bool duplicate = false;   // TODO: the FILTER-DUPS option will be phased out...  // IsDuplicate(&read1_5p,&read2_5p);
       if (duplicate==true) {
         if (p.p_type==DS_ACCEPTED_INTER) p.p_type = DS_DUPLICATE_INTER;
         else if (p.p_type==DS_ACCEPTED_INTRA) p.p_type = DS_DUPLICATE_INTRA;

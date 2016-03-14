@@ -3,6 +3,7 @@
 *.fastq.gz
 *.fastq
 *.bam
+*.a
 *.o
 *.so
 code/bin/*

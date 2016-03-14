@@ -82,9 +82,9 @@ counts <- as.vector(frequencies_f[,2])
 enrich <- t((annot2_m2/cutoff)/(counts/N))/(counts/N)
 #enrich <- t(annot2_m2/counts)/counts
 # Remove rows and columns with NA
-row_idx <- grep("N/A", rownames(enrich))
-col_idx <- grep("N/A", colnames(enrich))
-enrich1 <- enrich[-c(row_idx),-c(col_idx)]
+row_idx <- grep("N/A", rownames(enrich), invert=TRUE)
+col_idx <- grep("N/A", colnames(enrich), invert=TRUE)
+enrich1 <- enrich[row_idx,col_idx]
 enrich_f <- paste(outdir,"enrich.tsv",sep="/")
 write.table(enrich1,file=sprintf("%s", enrich_f),quote=FALSE,sep="\t",row.names=TRUE,col.names=TRUE)
 

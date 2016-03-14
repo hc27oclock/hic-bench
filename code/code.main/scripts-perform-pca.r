@@ -7,6 +7,9 @@
 
 plotPCA <- function(mat,show_text,use_short_names,plain)
 {
+  font_cex = 1.0
+  bullet_cex = 2.0
+  
   pca = prcomp(t(mat))
   if (plain==FALSE) {
     plot(pca)
@@ -22,8 +25,8 @@ plotPCA <- function(mat,show_text,use_short_names,plain)
     pc_list = c(PC2~PC1)
     f = function(pc) {
       xyplot(
-        pc, groups=fac, data=as.data.frame(pca$x), pch=16, cex=1,
-        panel=function(x, y, ...) { panel.xyplot(x, y, ...); ltext(x=x, y=y, labels=labels, pos=1, offset=0.8, cex=0.5) },
+        pc, groups=fac, data=as.data.frame(pca$x), pch=16, cex=bullet_cex,
+        panel=function(x, y, ...) { panel.xyplot(x, y, ...); ltext(x=x, y=y, labels=labels, pos=1, offset=0.8, cex=font_cex) },
         aspect = "fill", col=colours, scales=list(x=list(at=NULL),y=list(at=NULL)), xlab=NULL, ylab=NULL
       )
     }
@@ -31,10 +34,10 @@ plotPCA <- function(mat,show_text,use_short_names,plain)
     pc_list = c(PC2~PC1,PC3~PC2) 
     f = function(pc) {
       xyplot(
-        pc, groups=fac, data=as.data.frame(pca$x), pch=16, cex=1,
-        panel=function(x, y, ...) { panel.xyplot(x, y, ...); ltext(x=x, y=y, labels=labels, pos=1, offset=0.8, cex=0.5) },
+        pc, groups=fac, data=as.data.frame(pca$x), pch=16, cex=bullet_cex,
+        panel=function(x, y, ...) { panel.xyplot(x, y, ...); ltext(x=x, y=y, labels=labels, pos=1, offset=0.8, cex=font_cex) },
         aspect = "fill", col=colours,
-        main = draw.key(key=list(rect=list(col=colours),text=list(levels(fac)),rep=FALSE,cex=0.5))
+        main = draw.key(key=list(rect=list(col=colours),text=list(levels(fac)),rep=FALSE,cex=font_cex))
       )
     }
   }
