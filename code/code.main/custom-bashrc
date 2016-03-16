@@ -4,3 +4,4 @@ export LC_ALL=C
 export PATH=$(echo $(echo $PATH | tr ':' '\n' | grep -v '/at570/') | tr ' ' ':')
 export PATH=./code/code.main:$PATH
 
+umask 007
