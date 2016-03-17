@@ -35,11 +35,26 @@ set genome_dir = inputs/genomes/$genome
 scripts-create-path $outdir/
 
 # filter
-samtools view $branch/$object/alignments.bam | gtools-hic filter -v -E $genome_dir/$enzyme.fragments.bed --stats $outdir/stats.tsv $filter_params | gzip >! $outdir/filtered.reg.gz
+scripts-send2err "Filtering aligned reads..."
+samtools view $branch/$object/alignments.bam | gtools-hic filter -v -E $genome_dir/$enzyme.fragments.bed --stats $outdir/stats_with_dups.tsv $filter_params | sort -t'	' -k2 >! $outdir/filtered_with_dups.reg
+
+# remove duplicates
+scripts-send2err "Removing duplicates..."
+cat $outdir/filtered_with_dups.reg | uniq -f1 | gzip >! $outdir/filtered.reg.gz
+
+# update stats
+scripts-send2err "Updating statistics..."
+set n_intra_uniq = `cat $outdir/filtered_with_dups.reg | cut -f2 | uniq | cut -d' ' -f1,5 | awk '$1==$2' | wc -l`
+set n_inter_uniq = `cat $outdir/filtered_with_dups.reg | cut -f2 | uniq | cut -d' ' -f1,5 | awk '$1!=$2' | wc -l`
+Rscript ./code/update-filtered-stats.r $outdir/stats_with_dups.tsv $n_intra_uniq $n_inter_uniq >! $outdir/stats.tsv
+
+# cleanup
+rm -f $outdir/filtered_with_dups.reg $outdir/stats_with_dups.tsv
 
 # save variables
 set >! $outdir/job.vars.tsv
 
+scripts-send2err "Done."
 
 
 

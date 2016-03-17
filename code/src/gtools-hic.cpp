@@ -169,7 +169,7 @@ CmdLineWithOperations *InitCmdLine(int argc, char *argv[], int *next_arg)
     cmd_line->AddOption("--mapq", &MAPQ, 30, "minimum mapping quality (MAPQ)");
     cmd_line->AddOption("--min-dist", &FILTER_MIN_DISTANCE, 500, "miminum allowed distance between 5's of reads in read pair");
     cmd_line->AddOption("--max-offset", &FILTER_MAX_OFFSET, 500, "maximum allowed offset of 5's of reads from fragment ends");
-    cmd_line->AddOption("--filter-dups", &FILTER_DUPLICATES, false, "filter duplicate read pairs as PCR artifacts");
+//    cmd_line->AddOption("--filter-dups", &FILTER_DUPLICATES, false, "filter duplicate read pairs as PCR artifacts");
     cmd_line->AddOption("--stats", &STATS_FILE, "", "output statistics file (default=stderr)");
   }
   else if (op=="bin") {
@@ -414,18 +414,21 @@ void RunFilter(char **args, int argn, char *ref_reg_file, char *stats_file)
       read1_5p.ModifyPos("5p",0);
       GenomicInterval read2_5p = p.r[1]->I.front();
       read2_5p.ModifyPos("5p",0);
-      bool duplicate = false;   // TODO: the FILTER-DUPS option will be phased out...  // IsDuplicate(&read1_5p,&read2_5p);
+/*
+   // ATTN: the FILTER-DUPS option has been removed because it consumes too much memory
+      bool duplicate = IsDuplicate(&read1_5p,&read2_5p);
       if (duplicate==true) {
         if (p.p_type==DS_ACCEPTED_INTER) p.p_type = DS_DUPLICATE_INTER;
         else if (p.p_type==DS_ACCEPTED_INTRA) p.p_type = DS_DUPLICATE_INTRA;
       }
       if ((FILTER_DUPLICATES==false)||(duplicate==false)) { 
+*/
         printf("%s\t", p.r[0]->LABEL);
         read1_5p.PrintInterval();
         printf(" ");
         read2_5p.PrintInterval();
         printf("\n");
-      }
+//      }
     }
     n_reads++;
     n_class[p.p_type]++;
@@ -444,11 +447,15 @@ void RunFilter(char **args, int argn, char *ref_reg_file, char *stats_file)
   
   // cleanup
   delete QueryRegBuffer;
+
+/*
+   // ATTN: the FILTER-DUPS option has been removed because it consumes too much memory
   for (MapOfRead::iterator i_chr=dupMask.begin(); i_chr!=dupMask.end(); i_chr++) {
     MapOfRead2 *m2 = i_chr->second;
     for (MapOfRead2::iterator i_m2=m2->begin(); i_m2!=m2->end(); i_m2++) delete i_m2->second;
     delete m2;
   }
+*/
 }
 
 
