@@ -1,6 +1,5 @@
 #!/usr/bin/env Rscript
 
-
 # output width
 options(width=500)
 
@@ -91,8 +90,9 @@ save(db, file=dbContrastRData)
 
 cat("\n ===== generate plots ===== \n")
 
-# colors (combine two )
-colors = c(brewer.pal(9, "Set1"), brewer.pal(8, "Accent"))
+# colors (combine multiple to prevent running out of colors)
+colors = c(brewer.pal(9, "Set1"), brewer.pal(8, "Accent"), brewer.pal(8, "Dark2"))
+colors = unique(colors)
 
 # heatmap
 heatmapPDF = paste(outDir, "/plot.heatmap.fpkm.pdf", sep="")

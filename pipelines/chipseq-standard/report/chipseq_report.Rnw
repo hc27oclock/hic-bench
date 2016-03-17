@@ -1,24 +1,114 @@
-\documentclass[8pt]{beamer}
-\geometry{paperwidth=140mm,paperheight=105mm} % larger page size
+\documentclass[8pt]{beamer} % start LaTeX document
+% set up parameters in R for use in the document
+<<setup, include=FALSE>>=
+# % always need this code chunk for RNW files compiled with knitr, never mess with it unless you are a wizard
+# this sets knitr options for the document
+opts_chunk$set(fig.path='figure/beamer-',fig.align='center',fig.show='hold',size='footnotesize')
+@
+%
+<<R_title_setup,echo=FALSE,engine='R'>>=
+# in this code chunk, set some global R parameters for the report based on data from the pipeline
+# this information MUST be entered manually in the project_info.txt file in the parent project analysis directory !!
+# VERY IMPORTANT:
+# character strings that *appear in text* need to be translated to LaTeX to escape special characters, etc.
+# special note: only do this ONCE per text string to be printed or you'll get double-escapes
+suppressPackageStartupMessages(library("Hmisc")) # need for latexTranslate()
+suppressPackageStartupMessages(library(xtable)) # needed to print the sample sheet
+
+# read in the "project_info.txt" file
+# read contents in as a character vector, one element per line in the text file
+ProjInfo<-scan(file = paste(getwd(),"project_info.txt",sep="/"),character(0), sep = "\n")
+# example:
+# > ProjInfo
+# [1] "PROJECT-DIR: /ifs/home/kellys04/projects/SmithLab_ChIPSeq_2016-03-10"
+# [2] "PROJECT-ID: SmithLab_ChIPSeq_2016-03-10"                             
+# [3] "PROJECT-ID-SHORT: ChIP-Seq"                                            
+# [4] "REPORT-AUTHOR: Stephen M. Kelly"                                             
+# [5] "REPORT-AUTHOR-EMAIL: stephen.kelly@nyumc.org"                                
+# [6] "PI-NAME: PI"               
+
+# get specific items from the file's text contents
+# search for the item label, return the line contents minus the label
+# path to the analysis project
+Project_dir<-gsub(pattern = "PROJECT-DIR: ",
+                            replacement = "",
+                            x = grep(pattern = "PROJECT-DIR: ",x = ProjInfo,fixed = TRUE,value = TRUE),fixed = TRUE)
+# unqiue project identifier
+Project_ID<-gsub(pattern = "PROJECT-ID: ",
+                            replacement = "",
+                            x = grep(pattern = "PROJECT-ID: ",x = ProjInfo,fixed = TRUE,value = TRUE),fixed = TRUE)
+# escape characters that have special meaning to LaTeX on any character string appearing in the document
+Project_ID<-latexTranslate(Project_ID) 
+
+# short version of the ID to be printed on the sidebar
+Project_ID_short<-gsub(pattern = "PROJECT-ID-SHORT: ",
+                            replacement = "",
+                            x = grep(pattern = "PROJECT-ID-SHORT: ",x = ProjInfo,fixed = TRUE,value = TRUE),fixed = TRUE)
+Project_ID_short<-latexTranslate(Project_ID_short)
+
+# report authors (most likely you)
+Report_author<-gsub(pattern = "REPORT-AUTHOR: ",
+                            replacement = "",
+                            x = grep(pattern = "REPORT-AUTHOR: ",x = ProjInfo,fixed = TRUE,value = TRUE),fixed = TRUE)
+Report_author<-latexTranslate(Report_author)
+
+# author's email
+Report_author_email<-gsub(pattern = "REPORT-AUTHOR-EMAIL: ",
+                            replacement = "",
+                            x = grep(pattern = "REPORT-AUTHOR-EMAIL: ",x = ProjInfo,fixed = TRUE,value = TRUE),fixed = TRUE)
+Report_author_email<-latexTranslate(Report_author_email)
+
+# name of the PI on the project, or other supervisory member
+PI_name<-gsub(pattern = "PI-NAME: ",
+                            replacement = "",
+                            x = grep(pattern = "PI-NAME: ",x = ProjInfo,fixed = TRUE,value = TRUE),fixed = TRUE)
+PI_name<-latexTranslate(PI_name)
+
+
+# path to the project's 'pipeline' dir
+Pipeline_dir<-paste0(Project_dir,"/pipeline") 
+# read in the 'index.txt' file for the project pipeline
+Pipeline_Index<-scan(file=paste0(Pipeline_dir,"/index.txt"),what="", sep="\n",quiet = T)
+# example: 
+# > Pipeline_Index
+#  [1] "align"                "align-stats"          "qc"                   "fastqc"               "peaks"                "peaktable"           
+#  [7] "matrices.per_chip"    "matrices.per_patient" "pca.per_chip"         "pca.per_patient"      "heatmaps"             "peakdiff"            
+# [13] "diffbind"  
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~ TO DO ON THE REPORT HERE:
+# move the ghostscript, convert tif steps into pipeline steps
+# fix the sample sheet scaling to fit textwidth or something
+# The object name / branch name is displaying "all samples" for heatmaps, PCA, try to do somethign about this
+# need a wrapper script for the report to compile on the command line
+# add a list of the filenames from the samplesheet 
+
+@
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+% LaTeX settings start here:
+\geometry{paperwidth=140mm,paperheight=105mm} % larger page size than normal for larger plots and more flexibility with font sizes
 %\documentclass[8pt,xcolor={dvipsnames}]{beamer}
-\setcounter{secnumdepth}{3} % something about sections
+\setcounter{secnumdepth}{3} % how many levels deep before section headers stop getting numbers
 \setcounter{tocdepth}{3} % table of contents depth
 \usepackage{breakurl}
 \usepackage{cite} % for citations, BibTeX I think
-\usepackage{etoolbox} % this was not installed on HPCF, its in my home dir right now!! % has extra tools for forloops, etc.
+\usepackage{etoolbox} % this was not installed on HPCF, its in my home dir right now!! % has extra tools for LaTeX forloops, etc.; might not actually need this, use R loops to cat() LaTeX markup instead, much easier!
 \usepackage{forloop} % for LaTeX for loops; easier to use R loops to 'cat' TeX into the document instead!!
 \usepackage{tikz} % for custom graphics
 %\usepackage{subcaption} %for subfigures%
-\usepackage{amsmath}
+\usepackage{amsmath} % for math characters
 \usepackage{graphicx} % good for advanced graphics options
 \usepackage{tabularx} % for fancy table settings..
-\usepackage{url}
+\usepackage{url} % for typesetting URLs, also file paths? 
+\usepackage[multidot]{grffile} % support for image files with multiple '.' in the name
 % \usepackage{adjustbox} % for auto-size box to put sample sheet into, also needs collectbox.sty
 % \usepackage[usenames,dvipsnames]{color}
 %%%%%%%%%%%%%experimental for xtable italics http://stackoverflow.com/questions/7996968/formatting-sweave-tables-two-challenges
-% \usepackage{longtable}
+\usepackage{longtable} % allows for tables that break across pages
 % \SweaveOpts{keep.source=TRUE}  % Keeps formatting of the R code.
 %%%%%%%%%%%%%%%%%%%
+%
+% ~~~~~~ BEAMER SPECIFIC SETTINGS ~~~~~~~~ %
 \makeatletter % turn on the '@' command character; needs to come before beamer settings
 % \usetheme{Hannover} %  \usetheme{PaloAlto} % Bergen
 % \usetheme[left]{Marburg} %  width= % hideothersubsections
@@ -31,173 +121,146 @@
     \insertframenumber/\inserttotalframenumber
 }
 \makeatother % turn off the '@' command character; needs to come after beamer settings
-% \graphicspath{/home/varitint/Dropbox/Lab/Teaching/Genomics_Class/Genomics_Lesson3_R!/With_embedded_R_code/figure/}
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~%
+% \graphicspath{/home/varitint/Dropbox/Lab/Teaching/Genomics_Class/Genomics_Lesson3_R!/With_embedded_R_code/figure/} % default path to find figures
 %
 %%%%%%%%%%
-\listfiles % get versions of files used for document compliaton, written at the end of the .log file!
+\listfiles % get versions of files used for document compliaton, written at the end of the .log file for the report compilation!
 \begin{document}
-% always need this code chunk, never mess with it!
-<<setup, include=FALSE>>=
-opts_chunk$set(fig.path='figure/beamer-',fig.align='center',fig.show='hold',size='footnotesize')
-@
-%
-<<R_title_setup,echo=FALSE,engine='R'>>=
-# in this code chunk, set some global R parameters for the report
-# print in document with \Sexpr(); 
-# character strings that *appear in text* need to be translated to LaTeX to remove special characters, etc.
-suppressPackageStartupMessages(library("Hmisc")) # need for latexTranslate()
-suppressPackageStartupMessages(require(xtable))
-
-# get the project info from the text file
-ProjInfo<-scan(file = paste(getwd(),"project_info.txt",sep="/"),character(0), sep = "\n")
-
-
-Project_dir<-gsub(pattern = "PROJECT-DIR: ",
-                            replacement = "",
-                            x = grep(pattern = "PROJECT-DIR: ",x = ProjInfo,fixed = TRUE,value = TRUE),fixed = TRUE)
-
-
-Project_ID<-gsub(pattern = "PROJECT-ID: ",
-                            replacement = "",
-                            x = grep(pattern = "PROJECT-ID: ",x = ProjInfo,fixed = TRUE,value = TRUE),fixed = TRUE)
-Project_ID<-latexTranslate(Project_ID) # use this to print on the title page
-# use latexTranslate on any text string that is going to appear in the doc
-
-Project_ID_short<-gsub(pattern = "PROJECT-ID-SHORT: ",
-                            replacement = "",
-                            x = grep(pattern = "PROJECT-ID-SHORT: ",x = ProjInfo,fixed = TRUE,value = TRUE),fixed = TRUE)
-Project_ID_short<-latexTranslate(Project_ID_short)
-
-
-Report_author<-gsub(pattern = "REPORT-AUTHOR: ",
-                            replacement = "",
-                            x = grep(pattern = "REPORT-AUTHOR: ",x = ProjInfo,fixed = TRUE,value = TRUE),fixed = TRUE)
-Report_author<-latexTranslate(Report_author)
-
-
-Report_author_email<-gsub(pattern = "REPORT-AUTHOR-EMAIL: ",
-                            replacement = "",
-                            x = grep(pattern = "REPORT-AUTHOR-EMAIL: ",x = ProjInfo,fixed = TRUE,value = TRUE),fixed = TRUE)
-Report_author_email<-latexTranslate(Report_author_email)
-
-
-PI_name<-gsub(pattern = "PI-NAME: ",
-                            replacement = "",
-                            x = grep(pattern = "PI-NAME: ",x = ProjInfo,fixed = TRUE,value = TRUE),fixed = TRUE)
-  
-PI_name<-latexTranslate(PI_name)
-
-# 
-
-Pipeline_dir<-paste0(Project_dir,"/pipeline") 
-Pipeline_Index<-scan(file=paste0(Pipeline_dir,"/index.txt"),what="", sep="\n",quiet = T)
-
-# ~~~~~~ TO DO ON THE REPORT HERE:
-# move the ghostscript, convert tif steps into pipeline steps
-# fix the sample sheet scaling to fit textwidth or something
-# The object name / branch name is displaying "all samples" for heatmaps, PCA, try to do somethign about this
-# Update all run files with new descriptors for report aspects
-# need a wrapper script for the report to compile on the command line
-# add a list of the filenames from the samplesheet 
-
-@
 % Create the Title page
-
 \title[\Sexpr{Project_ID_short}]{\Sexpr{Project_ID} \\ Quality Metrics}
 \author{\Sexpr{Report_author}}
 \institute{\normalsize Dr. Aristotelis Tsirigos \\ PI: \Sexpr{PI_name} \\ Genome Technology Center, \\ NYU Langone Medical Center, New York, NY 10016}
 \date{\texttt{\Sexpr{Report_author_email}} \\ \today}
 \titlegraphic{\includegraphics[width=0.25\textwidth]{figure/NYU_white}} % image to show on the title slide
 \maketitle
-
 <<beamer-function,engine='R',include=FALSE,echo=FALSE>>=
-# function for creating the beamer slides
+# This is a custom function for creating the beamer slides from the pipeline input
+# note: this function depends on the existence of the items created at the start of the document in earlier code chunks
 pipeline_report_generatoR<- function(x){
-  # x is a line/entry in the pipeline indext.txt e.g. "qc", corresponds to dir name
-  # x<-"heatmaps"
-  
-  # ~~~~~ OBJECT CREATION ~~~~~~~~~ #
+  # x is a line/entry in the pipeline indext.txt e.g. "qc"; corresponds to dir name in the 'pipeline' dir
+
+  # ~~~~~ R OBJECT CREATION ~~~~~~~~~ #
   # read in the run file for the pipeline step
   RunFile<-scan(file = paste(Pipeline_dir,x,"run",sep="/"),character(0), sep = "\n")
   
+  # search the run file for pre-defined labels to identify items to include in the report
   # get the description of the pipeline step from the run file
   PipelineDescription<-gsub(pattern = "#DESCRIPTION: ",
                             replacement = "",
                             x = grep(pattern = "#DESCRIPTION: ",x = RunFile,fixed = TRUE,value = TRUE),fixed = TRUE)
+  
+  # get the title to be displayed for the Pipeline step
   PipelineTitle<-gsub(pattern = "#TITLE: ",
-                            replacement = "",
-                            x = grep(pattern = "#TITLE: ",x = RunFile,fixed = TRUE,value = TRUE),fixed = TRUE)
-  # check if Title exitsts; otherwise use the pipeline step name
+                      replacement = "",
+                      x = grep(pattern = "#TITLE: ",x = RunFile,fixed = TRUE,value = TRUE),fixed = TRUE)
+  
+  # check if Title exitsts; otherwise use the pipeline step name from the index.txt
   if(length(PipelineTitle)==0L){PipelineTitle<-x}
-
+  
+  # get the filename of the figures to be included in the report
+  # there can be multiple figures listed, separated by spaces
   FigureFilename<-unlist(strsplit(x = gsub(pattern = "#FIGURE: ",
                                            replacement = "", x = grep(pattern = "#FIGURE: ",
                                                                       x = RunFile,fixed = TRUE,value = TRUE),
                                            fixed = TRUE),
                                   split = " ",fixed = TRUE))
-  # get the params file
+   # example: 
+#   > FigureFilename
+# [1] "chip-fingerprint.pdf" "chip-fingerprint.pdf"
+  
+  # get the params files filenames
   PipelineParamsFilename<-unlist(strsplit(x = gsub(pattern = "#PARAMS: ",
                                                    replacement = "",x = grep(pattern = "#PARAMS: ",
                                                                              x = RunFile,fixed = TRUE,value = TRUE),
                                                    fixed = TRUE),
                                           split = " ",fixed = TRUE))
-
   
-  # load the environment saved in the pipeline step 
+  
+  # load the environment file that was saved in the pipeline step results dir upon pipeline execution; this will contain information needed to make the report
   load(file = paste0(Pipeline_dir,"/",x,"/results/.db/db.RData"),verbose = FALSE)
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ # 
   
-  
-  
-  # ~~~~ PRINT SOME LATEX ~~~~~~~~~~#
-  # start a new section in the document
+  # ~~~~ PRINT SOME LaTeX ~~~~~~~~~~#
+  # start a new section in the document; this gets printed in the sidebar
   cat("\\section{", latexTranslate(PipelineTitle), "}\n", sep="") 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ # 
   
   
-  # if description is defined, print it
+  # if description is defined, print it in a new slide
   if(length(PipelineDescription)!=0){
     cat("\\begin{frame}{", latexTranslate(PipelineTitle), "}\n", sep="")
     cat(latexTranslate(PipelineDescription),"\n",sep = "")
     cat("\\end{frame}\n\n") 
   }
   
-  # if params files are defined, print them
+  # if params files are defined, print them in new slides
   if(length(PipelineParamsFilename)!=0){
     for(k in PipelineParamsFilename){
       PipelineParams<-scan(file = paste(Pipeline_dir,x,"params",k,sep="/"),character(0), sep = "\n")
-     cat("\\begin{frame}{", latexTranslate(PipelineTitle), " Parameters}\n", sep="")
-     cat("\\scriptsize{",cat(k,latexTranslate(PipelineParams),sep = "\n\n"),"}\n",sep = "")
-     cat("\\end{frame}\n\n")
+      cat("\\begin{frame}{", latexTranslate(PipelineTitle), " Parameters}\n", sep="")
+      cat("\\scriptsize{",cat(k,latexTranslate(PipelineParams),sep = "\n\n"),"}\n",sep = "")
+      cat("\\end{frame}\n\n")
     }
   }
   
   # print the figures
-  for(q in 1:length(obj_db[['out-dir']])){
+  # obj_db[['out-dir']] has a list of the full results dirpath's for all results created in the pipeline step
+  for(q in seq_along(obj_db[['out-dir']])){
     # ~~~~~ OBJECT CREATION ~~~~~~~~~ #
-    # get the items we need
-    ObjectName<-as.character(obj_db[['out-object']][q]) # outout object # latexTranslate()
-    ObjectBranch<-as.character(obj_db[['out-branch']][q]) # output analysis branch
-    ObjectOutdir<-as.character(obj_db[['out-dir']][q]) # out-dir 
+    # get the object name, and the object's analysis 'branch' or combination of execution params, all listed in the obj_db item
+    # note: Object branch + object = full results filepath
+    ObjectName<-as.character(obj_db[['out-object']][q]) 
+    ObjectBranch<-as.character(obj_db[['out-branch']][q]) 
+    
+    # get the last entry in the Branch; use this for future developments
+    ObjectBranch_tail<-tail(unlist(strsplit(x = ObjectBranch,split = "/",fixed = TRUE)),n=1)
+    # head(unlist(strsplit(x = ObjectBranch,split = "/",fixed = TRUE)))
+    
+    # get the object's output directory
+    ObjectOutdir<-as.character(obj_db[['out-dir']][q])
+    
+    # make the full path to the figures 
     FigureFilepath<-paste(Pipeline_dir,x,ObjectOutdir,FigureFilename,sep="/")
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ # 
     
-    # ~~~~ PRINT SOME LATEX ~~~~~~~~~~#
-    # print the LaTeX markup for the beamer frame
-    cat("\\subsubsection{", latexTranslate(ObjectName), "}\n", sep="") # this needs to be changed; see Heatmaps
-    cat("\\begin{frame}{", latexTranslate(ObjectName), "}\n", sep="") # this needs to be changed; see Heatmaps
-    cat("\\scriptsize{", latexTranslate(ObjectBranch), "}\n", sep="")
-    cat("\\includegraphics[width=0.9\\linewidth,height=0.9\\textheight,keepaspectratio]{", FigureFilepath, "}\n", sep="")
-    cat("\\end{frame}\n\n") 
-    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ # 
+    # print a new slide for every Figure listed
+    for(figure in FigureFilepath){
+      # check to make sure there are no more than 1 '.' in the file name, otherwise LaTeX breaks
+#       if(grep(pattern = ".",x = basename(figure))>=2){
+#         print("ARRGH")
+#       }
+
+      # Check to make sure that the Figure file exists! 
+      # if (file.exists(FigureFilepath)) {
+      if (file.exists(figure)) {
+        # ~~~~ PRINT SOME LATEX ~~~~~~~~~~#
+        # print the LaTeX markup for the beamer frame
+        cat("\\subsubsection{", latexTranslate(ObjectName), "}\n", sep="") # this needs to be changed; see Heatmaps
+        # cat("\\subsubsection{", latexTranslate(ObjectBranch_tail), "}\n", sep="") 
+        cat("\\begin{frame}{", latexTranslate(ObjectName), "}\n", sep="") # this needs to be changed; see Heatmaps
+        # cat("\\begin{frame}{", latexTranslate(ObjectBranch), "}\n", sep="") 
+        cat("\\scriptsize{", latexTranslate(ObjectBranch), "}\n", sep="") # print the branch text on the slide
+        # cat("\\scriptsize{", latexTranslate(ObjectName), " ",latexTranslate(unlist(strsplit(x = ObjectBranch,split = "/",fixed = TRUE))), "}\n", sep=" ") # print the branch text on the slide
+        
+        # cat("\\includegraphics[width=0.9\\linewidth,height=0.9\\textheight,keepaspectratio]{", FigureFilepath, "}\n", sep="")
+        cat("\\includegraphics[width=0.9\\linewidth,height=0.9\\textheight,keepaspectratio]{", figure, "}\n", sep="")
+        cat("\\end{frame}\n\n") 
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ # 
+        
+      }
+      
+    }
   }
 }
 
 @
 
-
 <<image_conversion,echo=FALSE,engine='bash',include=FALSE>>=
+# bash script to do some image conversion needed for compatibility with LaTeX
 # this step is hard coded for now, needs to be incorporated into the pipeline
+
+# settings needed for glob
 #~~~ Shell Options ~~~~#
 # remember whether extglob was originally set, so we know whether to unset it
 shopt -q extglob; extglob_set=$?
@@ -212,55 +275,70 @@ shopt -q globstar; globstar_set=$?
 ((globstar_set)) && shopt -s globstar
 #~~~~~~~~~~~~~~~~~~#
 
+# this symlink already exists in the report dir, points back to the pipeline dir
+Pipeline_dir="pipeline" 
 
-
-Pipeline_dir="pipeline" # symlink
-
-
-# convert the heatmaps to png for LaTeX
+# this step will convert the heatmaps to png for LaTeX
+# heatmaps dir:
 Pipeline_heatmaps_dir="$Pipeline_dir/heatmaps/results"
-# glob the peaks files we want
+# glob the peaks figures files
 FILES=($Pipeline_heatmaps_dir/**/@(clustering.tif) )
 for i in "${FILES[@]}"; do
+  # make a temp filename ending in .png
   TMP_NAME=$(echo ${i%.tif}.png)
+  # call Imagemagick program 'convert' tool to change the .tif to a png
   convert "$i" "${i%.tif}.png"
 done
 
 
-# extract 3rd page pdf from PCA pdf
+# extract 3rd page pdf from the multi-page PCA pdf
 # !!!! figure names cannot contain '.' as per LaTeX !!!!
-Pipeline_pca_dir="$Pipeline_dir/pca/results"
+Pipeline_pca_dir="$Pipeline_dir/pca*/results"
 FILES=($Pipeline_pca_dir/**/@(report.qnorm.pdf) )
 for i in "${FILES[@]}"; do
+  # make a temp file name with the correct formatting
   TMP_NAME=$(echo ${i%.qnorm.pdf}_qnorm_page3.pdf)
+  # use ghostscript to extract just the 3rd page from the PDF
   gs -sDEVICE=pdfwrite -dNOPAUSE -dBATCH -dFirstPage=3 -dLastPage=3 -sOutputFile="$TMP_NAME" "$i"
 done
 
-# unset globs if it wasn't originally set # probably not needed here... 
+# unset globs if it wasn't originally set 
 ((extglob_set)) && shopt -u extglob
 ((nullglob_set)) && shopt -u nullglob
 ((globstar_set)) && shopt -u globstar
 
 @
 
-% make the report
+% REPORT STARTS HERE!
 <<sample_sheet,results='asis',echo=FALSE,eval=TRUE>>=
-# print the sample sheet
+# print the sample sheet into the document
 PipelineSampleSheet<-read.table(file = paste(Pipeline_dir,"inputs","sample-sheet.tsv",sep = "/"),header = T,sep = "\t" )
 
-cat("\\section{", "Sample Sheet", "}\n", sep="") # don't forget you need double '\\' because one gets eaten by R !!
-cat("\\begin{frame}{"," Analysis Sample Sheet}\n", sep="") 
-# print(xtable(x = PipelineSampleSheet[,grep("^fastq",colnames(PipelineSampleSheet),invert = T)]),size="\\footnotesize",width = "\\textwidth",tabular.environment = "tabularx")#scalebox = 0.5)
-print(xtable(x = PipelineSampleSheet[,grep("^fastq",colnames(PipelineSampleSheet),invert = T)]),size="\\footnotesize",scalebox = 0.6)
-cat("\\end{frame}\n\n") 
+# split the dataframe into smaller 50 row dataframes to fit on the page better
+tmpdf<-split(PipelineSampleSheet,(seq_len(nrow(PipelineSampleSheet))-1) %/%50)
 
-# example  
-# a <- initial_data[grep("^OFB[0-9]+", names(initial_data))]   # nice regex example here
+# print the section heading
+cat("\\section{", "Sample Sheet", "}\n", sep="") # don't forget you need double '\\' because one gets eaten by R !!
+
+# print each sub-df
+for(i in seq_along(tmpdf)){
+  # print(nrow(tmpdf[[i]]))
+  cat("\\begin{frame}{"," Analysis Sample Sheet}\n", sep="") 
+  print(xtable(x = tmpdf[[i]][,grep("^fastq",colnames(tmpdf[[i]]),invert = T)]),size="\\footnotesize",scalebox = 0.6)
+
+  # old versions:
+  # print(xtable(x = PipelineSampleSheet[,grep("^fastq",colnames(PipelineSampleSheet),invert = T)]),size="\\footnotesize",width = "\\textwidth",tabular.environment = "tabularx")#scalebox = 0.5)
+  # print(xtable(x = PipelineSampleSheet[,grep("^fastq",colnames(PipelineSampleSheet),invert = T)]),size="\\footnotesize",scalebox = 0.6)
+  # print(xtable(x = PipelineSampleSheet[,grep("^fastq",colnames(PipelineSampleSheet),invert = T)]),size="\\footnotesize",scalebox = 0.6,tabular.environment = "longtable") # doesn't work :(
+  cat("\\end{frame}\n\n") 
+}
+
+# nice regex example here
+# a <- initial_data[grep("^OFB[0-9]+", names(initial_data))]   
 @
 %
 <<default_params,results='asis',echo=FALSE,eval=TRUE>>=
-# print the default params
-
+# print the default pipeline params into the document
 DefaultInputParams_filepath<-paste(getwd(),"pipeline", "inputs", "params","params.tcsh", sep="/")
 DefaultInputParams<-scan(file = DefaultInputParams_filepath,character(0), sep = "\n")
      cat("\\begin{frame}{", latexTranslate("Default Pipeline Parameters"), " Parameters}\n", sep="")
@@ -270,10 +348,13 @@ DefaultInputParams<-scan(file = DefaultInputParams_filepath,character(0), sep = 
 @
 %
 <<generate_report,results='asis',echo=FALSE,eval=TRUE>>=
-
+# generate all of the slides for the report using the custom function created; pipeline_report_generatoR
+     
 # iterate over the pipeline index
-# Pipeline_Index<-c("align")#,"align-stats","qc","peaks","peaktable","matrices","pca","heatmaps","peakdiff")
-for(i in Pipeline_Index){
+# e.g.: Pipeline_Index<-c("align")#,"align-stats","qc","peaks","peaktable","matrices","pca","heatmaps","peakdiff")
+# remove any index entries that have '#' in them
+Pipeline_Index_good<-grep(pattern = "#",x = Pipeline_Index,value = TRUE,invert = TRUE)
+for(i in Pipeline_Index_good){
   # only execute the fuction if there are figures defined in the run file
   RunFile<-scan(file = paste(Pipeline_dir,i,"run",sep="/"),character(0), sep = "\n")
 
@@ -285,8 +366,6 @@ for(i in Pipeline_Index){
   
  }
 
-# && file.exists(FigureFilename)# need a way to make sure the output figures exist before trying to include them.. 
-# reconfigure the report code so that it is executed during pipeline, output each section's LaTeX in a child doc, pull into this doc
 @
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Session Information}
@@ -295,6 +374,7 @@ for(i in Pipeline_Index){
 <<Session>>=
 system('uname -srv',intern=T)
 sessionInfo()
+save.image()
 @
 \LaTeX{} version: \LaTeXe~ \fmtversion
 % \end{frame}
