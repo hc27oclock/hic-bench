@@ -261,6 +261,12 @@ if [ ! -f $OUT_DIR/sample-sheet.tsv ]; then
   cp -avn "$Pipeline_dir/inputs/sample-sheet.tsv" $OUT_DIR/sample-sheet.tsv
 fi
 
+
+# copy the report
+if [ ! -f $OUT_DIR/chipseq_report.pdf ]; then
+  cp -avn "$PROJ_DIR/report/chipseq_report.pdf" $OUT_DIR/chipseq_report.pdf
+fi
+
 # unset globs if it wasn't originally set
 ((extglob_set)) && shopt -u extglob
 ((nullglob_set)) && shopt -u nullglob
