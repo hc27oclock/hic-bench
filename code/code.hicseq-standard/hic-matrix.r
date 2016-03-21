@@ -851,6 +851,7 @@ op_normalize <- function(cmdline_args)
     make_option(c("--min-mappability"), default=0.2, help="Minimum mappability [default \"%default\"]."),
     make_option(c("--scale"), action="store_true",default=FALSE, help="Scale matrix by total number of reads and effective length."),
     make_option(c("--impute"), action="store_true",default=FALSE, help="Impute matrix."),
+    make_option(c("--replace-na"), action="store_true",default=FALSE, help="Replace all NA values with zero."),
     make_option(c("--dist"), default=0, help="Distance in number of bins [default \"%default\"].")
   )
   usage = 'hic-matrix.r normalize [OPTIONS] MATRIX';
@@ -917,7 +918,10 @@ op_normalize <- function(cmdline_args)
       write(paste('Symmetricity of imputed matrix = ',sum(y==t(y))/length(y),sep=''),stderr())
     }
   }
-  
+
+  # if --replace-na is set, then replace of NA values with zero
+  if (opt$"replace-na"==TRUE) y[is.na(y)] = 0
+    
   if (opt$dist>0) {
     # rotate matrix
     if (opt$verbose) write('Rotating matrix...',stderr())

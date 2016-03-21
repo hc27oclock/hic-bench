@@ -18,12 +18,13 @@ f <- function(r) { x = c(as.vector(r["locus1-marks"])); y = c(as.vector(r["locus
 args <- commandArgs(trailingOnly=TRUE)
 
 # Get the arguments (annotations table)
-if (length(args) != 3) {print("plot_annotations.R OUTDIR ANNOTATION-FILE CUTOFF"); quit(save="no")}
+if (length(args) != 4) {print("plot_annotations.R OUTDIR ANNOTATION-FILE FREQ-FILE CUTOFF"); quit(save="no")}
 
 # Get the annotation file
 outdir     <- args[1]
 annot_file <- args[2]
-cutoff     <- as.integer(args[3])
+freq_file  <- args[3]
+cutoff     <- as.integer(args[4])
 
 # Read it
 annot <- read.table(sprintf("%s", annot_file), header=TRUE, stringsAsFactors=FALSE, check.names=FALSE)
@@ -67,31 +68,25 @@ write.table(annot2_m2,file=sprintf("%s", counts_f),quote=FALSE,sep="\t",row.name
 x1 = unique(annot1[,c("locus1","locus1-marks")])
 x2 = unique(annot1[,c("locus2","locus2-marks")])
 colnames(x1) = colnames(x2) = c("locus","marks")
-frequencies <- count(unlist(strsplit(unique(rbind(x1,x2))[,2],',')))
 
 # First find the frequency entries that are represented in the top interactions selected
-frequencies_f <- subset(frequencies, frequencies$x %in% rownames(annot2_m2))
-colnames(frequencies_f) <- c("ChIP","Count")
-freq_f <- paste(outdir,"counts.tsv",sep="/")
-write.table(frequencies_f,file=sprintf("%s", freq_f),quote=FALSE,sep="\t",row.names=FALSE,col.names=TRUE)
-
-# Create the frequencies vector
-counts <- as.vector(frequencies_f[,2])
+freq <- read.table(freq_file, header=FALSE, row.names=1, stringsAsFactors=FALSE, check.names=FALSE)
 
 # Now calculate the enrichment
-enrich <- t((annot2_m2/cutoff)/(counts/N))/(counts/N)
-#enrich <- t(annot2_m2/counts)/counts
-# Remove rows and columns with NA
-row_idx <- grep("N/A", rownames(enrich), invert=TRUE)
-col_idx <- grep("N/A", colnames(enrich), invert=TRUE)
-enrich1 <- enrich[row_idx,col_idx]
+common = intersect(rownames(annot2_m2),rownames(freq))
+r = !is.na(match(rownames(freq),common))
+freq = as.vector(freq[r,1])
+r = !is.na(match(rownames(annot2_m2),common))
+annot2_m2 = annot2_m2[r,r,drop=FALSE]
+enrich <- t((annot2_m2/cutoff)/freq)/freq
+
+# save
 enrich_f <- paste(outdir,"enrich.tsv",sep="/")
-write.table(enrich1,file=sprintf("%s", enrich_f),quote=FALSE,sep="\t",row.names=TRUE,col.names=TRUE)
+write.table(enrich,file=sprintf("%s", enrich_f),quote=FALSE,sep="\t",row.names=TRUE,col.names=TRUE)
 
 # write.table(enr)
 out <- paste(outdir,"enrichment.pdf",sep="/")
 pdf(sprintf("%s",out), useDingbats=FALSE)
-corrplot(enrich1, is.corr=FALSE, order="alphabet", method="circle",
-         tl.pos="lt", tl.col="blue", cl.pos="b", tl.srt=45, tl.cex=0.8)
+corrplot(enrich, is.corr=FALSE, order="alphabet", method="circle", tl.pos="lt", tl.col="blue", cl.pos="b", tl.srt=45, tl.cex=0.8)
 dev.off() 
 
