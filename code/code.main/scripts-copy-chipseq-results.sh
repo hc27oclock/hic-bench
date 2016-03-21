@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ##
-## USAGE: scripts-copy-chipseq.sh /path/to/outdir /path/to/project_dir /path/to/project_dir/alignment_stats_dir /path/to/fastqc_dir
+## USAGE: scripts-copy-chipseq.sh /path/to/outdir /path/to/project_dir 
 ## this script copies the results of a chip-seq analysis over to a Results dir for a client. 
 ## 
 
@@ -21,7 +21,7 @@ shopt -q globstar; globstar_set=$?
 #~~~~~~~~~~~~~~~~~~#
 
 # make sure that the correct number of script arguments were used
-if [ $# != 4 ] # if not enough args provided
+if [ $# != 2 ] # if not enough args provided
 then
   grep '^##' $0 # print out lines from the script that start with '##' and exit
   exit
@@ -31,8 +31,8 @@ fi
 
 OUT_DIR="$(readlink -m $1)" # get full path, through symlinks
 PROJ_DIR="$(readlink -m $2)"
-Algn_stats_dir="$(readlink -m $3)"
-FastQC_dir="$(readlink -m $4)"
+# Algn_stats_dir="$(readlink -m $3)"
+# FastQC_dir="$(readlink -m $3)"
 Pipeline_dir="$PROJ_DIR"/pipeline
 
 
@@ -187,6 +187,24 @@ if [ -d $Pipeline_dir/qc/results ]; then
 fi
 
 
+#
+##
+# Copy the fastqc results
+if [ -d $Pipeline_dir/fastqc/results ]; then
+  Pipeline_fastqc_dir="$Pipeline_dir/fastqc/results"
+  # make the outdir
+  OUT_DIR_fastqc="$OUT_DIR/fastqc"
+  mkdir -p $OUT_DIR_fastqc
+  rsync -avh --exclude "job.*" --exclude ".db*" "$Pipeline_fastqc_dir/" "$OUT_DIR_fastqc"
+fi
+# if [ ! -d $OUT_DIR/$(basename $FastQC_dir) ]; then
+#   cp -avn "$FastQC_dir" $OUT_DIR/$(basename $FastQC_dir)
+# fi
+# Copy qc fiongerprints; chip-fingerprint.pdf
+
+
+
+
 #  Skip this for now.. update this code later too!
 # # copy the Peaks table
 # if [ -d $Pipeline_dir/peaktable/results ]; then
@@ -212,19 +230,41 @@ fi
 
 
 # Copy the alignment summary stats, if it doesn't exist
-if [ ! -d $OUT_DIR/$(basename $Algn_stats_dir) ]; then
-  cp -avn "$Algn_stats_dir" $OUT_DIR/$(basename $Algn_stats_dir)
+# if [ ! -d $OUT_DIR/$(basename $Algn_stats_dir) ]; then
+#   cp -avn "$Algn_stats_dir" $OUT_DIR/$(basename $Algn_stats_dir)
+# fi
+if [ -d "$Pipeline_dir/align-stats/results" ]; then
+  Pipeline_align_stats_dir="$Pipeline_dir/align-stats/results"
+  # make the outdir
+  OUT_DIR_algnstats="$OUT_DIR/align-stats"
+  mkdir -p "$OUT_DIR_algnstats"
+  
+  rsync -avh --exclude "job.*" "$Pipeline_dir/align-stats/results" "$OUT_DIR_algnstats"
 fi
 
 
-# Copy the fastqc dir, if it doesn't exist
-if [ ! -d $OUT_DIR/$(basename $FastQC_dir) ]; then
-  cp -avn "$FastQC_dir" $OUT_DIR/$(basename $FastQC_dir)
+# copy the diffbind results diffbind
+if [ -d $Pipeline_dir/diffbind/results ]; then
+  if [ ! -d $OUT_DIR/diffbind ]; then
+    Pipeline_diffbind_dir="$Pipeline_dir/diffbind/results"
+    # make the outdir
+    OUT_DIR_diffbind="$OUT_DIR/diffbind"
+    mkdir -p $OUT_DIR_diffbind
+    rsync -avh --exclude "job.*" --exclude ".db*" "$Pipeline_diffbind_dir" "$OUT_DIR_diffbind"
+    # see Igor's script for this
+  fi
 fi
+
 
 # Copy the sample sheet
 if [ ! -f $OUT_DIR/sample-sheet.tsv ]; then
   cp -avn "$Pipeline_dir/inputs/sample-sheet.tsv" $OUT_DIR/sample-sheet.tsv
+fi
+
+
+# copy the report
+if [ ! -f $OUT_DIR/chipseq_report.pdf ]; then
+  cp -avn "$PROJ_DIR/report/chipseq_report.pdf" $OUT_DIR/chipseq_report.pdf
 fi
 
 # unset globs if it wasn't originally set
