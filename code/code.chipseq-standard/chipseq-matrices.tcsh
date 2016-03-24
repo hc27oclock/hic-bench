@@ -40,7 +40,7 @@ scripts-create-path $outdir/
 
 # determine input files
 set alignments = `echo $samples | tr ' ' '\n' | awk -v d=$aln_branch '{print d"/"$0"/alignments.bam"}'`
-set ref_regions = `echo $objects | tr ' ' '\n' | awk -v b=$branch '{print b"/"$1"/peaks.bed"}'`
+set ref_regions = $branch/*/peaks.bed    #`echo $ref_objects | tr ' ' '\n' | awk -v b=$branch '{print b"/"$1"/peaks.bed"}'` TODO: how do we obtain all ref-objects??
 
 # create ref.bed
 scripts-create-path $outdir/
