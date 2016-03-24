@@ -39,7 +39,7 @@ scripts-create-path $outdir/
 # -------------------------------------
 
 # create merged peaks reference
-set peaks = $branch/*/peaks.bed
+set peaks = `echo $objects | tr ' ' '\n' | awk -v b=$branch '{print b"/"$1"/peaks.bed"}'`
 cat $peaks | gtools-regions bed | scripts-sortbed | gtools-regions link -d $peakdist | gtools-regions reg | cut -f2 | tools-rows -number -pref MERGED-PEAK- | sort >! $outdir/ref.reg 
 
 # create table
