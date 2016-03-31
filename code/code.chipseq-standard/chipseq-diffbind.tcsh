@@ -62,18 +62,15 @@ end
 Rscript --vanilla ./code/chipseq-diffbind.R $outdir $diffbind_sample_sheet $genome $diffbind_blocking_factor
 
 
-
 # -------------------------------------
 # -----  MAIN CODE ABOVE --------------
 # -------------------------------------
-
 
 # save variables
 source ./code/code.main/scripts-save-job-vars
 
 # done
 scripts-send2err "Done."
-
 
 
 
