@@ -2,7 +2,7 @@
 source ./code/code.main/custom-tcshrc      # customize shell environment
 
 ##
-## USAGE: pipeline-errors DIRECTORY
+## USAGE: pipeline-errors INPUT-DIR
 ##
 
 if ($#argv != 1) then
@@ -10,7 +10,25 @@ if ($#argv != 1) then
   exit
 endif
 
-set d = $1
+set inpdir = $1
+set outdir = errors
 
-find $d/ -name 'job.*' -print0 | xargs -0 grep -iE 'usage|error|segmentation|not found|join.*sort|no such file|syntax|terminate' | grep -vE 'Tcl command execution failed|Module .* conflicts with the currently loaded module|Module .* depends on one of the module' 
+mkdir -p $outdir
+
+# first check job stderr output files
+find $inpdir/ -name 'job.*' -print0 | xargs -0 grep -iE 'usage|error|segmentation|not found|join.*sort|no such file|syntax|terminate' | grep -vE 'Tcl command execution failed|Module .* conflicts with the currently loaded module|Module .* depends on one of the module' >&! $outdir/error.log
+
+# then, check exit status of each job
+set jfiles = `find $inpdir -name 'job.*id'`
+foreach f ($jfiles)
+  scripts-send2err "Processing $f..."
+  set jid = `cut -d' ' -f3 $f`
+  set outf = $outdir/job.$jid.txt
+  echo "FILE: $f" >! $outf
+  echo "JOB-ID: $jid" >> $outf
+  qacct -j $jid >>& $outf
+end
+
+grep -E '^failed|^exit_status' $outdir/job.*.txt | sed 's/ *$//' | grep -v ' 0$' >> $outdir/error.log
+
 
