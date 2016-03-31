@@ -1,7 +1,8 @@
 #!/usr/bin/env Rscript
 
+
 # output width
-options(width=500)
+options(width=300)
 
 # load libraries
 library(DiffBind)
@@ -9,13 +10,12 @@ library(RColorBrewer)
 library(biomaRt)
 library(ChIPpeakAnno)
 
-
 # process command-line arguments (only arguments after --args)
 args = commandArgs(trailingOnly=T)
 outDir = args[1]
 sampleSheetCsv = args[2]
 genome = args[3]
-#blockFactor = args[4]
+blockFactor = args[4]
 
 
 # extract differentially bound peaks and annotate them
@@ -24,14 +24,24 @@ generateDiffBindReport = function(dba, contrast, th=0.05, method=DBA_DESEQ2, rep
 	library(DiffBind)
 	library(ChIPpeakAnno)
 
-	# RangedData
-	db.gr = as(dba.report(db, contrast=contrast, method=method, th=th, bCounts=reps), "GRanges")
+	# extract contrast group names
+	contrasts = as.matrix(dba.show(db, bContrasts=T))
+	group1 = contrasts[as.character(contrast), "Group1"]
+	group2 = contrasts[as.character(contrast), "Group2"]
 
-	cat("start peak annotation \n")
+	# report
+	message("[generateDiffBindReport] generate diffbind report")
+	message("[generateDiffBindReport] contrast num: ", contrast)
+	message("[generateDiffBindReport] group1: ", group1)
+	message("[generateDiffBindReport] group2: ", group2)
+	message("[generateDiffBindReport] threshold: ", th)
+	db.gr = dba.report(db, contrast=contrast, method=method, th=th, bCounts=reps, DataType=DBA_DATA_GRANGES)
+
+	message("[generateDiffBindReport] annotate peaks")
 	db.ann.gr = annotatePeakInBatch(db.gr, AnnotationData=tss, PeakLocForDistance="middle", FeatureLocForDistance="TSS", output="shortestDistance", multiple=T)
 
 	# add gene symbols
-	cat("add gene symbols \n")
+	message("[generateDiffBindReport] add gene symbols")
 	db.ann.df = merge(as.data.frame(db.ann.gr) , mart.df , by.x=c("feature"), by.y=c("ensembl_gene_id") , all.x=T)
 
 	# keep just the relevant columns
@@ -47,35 +57,28 @@ generateDiffBindReport = function(dba, contrast, th=0.05, method=DBA_DESEQ2, rep
 	ann.merged$seqnames = as.character(ann.merged$seqnames)
 	ann.merged = ann.merged[with(ann.merged, order(seqnames, start)), ]
 
-	# extract contrast group names
-	contrasts = as.matrix(dba.show(db, bContrasts=T))
-	group1 = contrasts[as.character(contrast), "Group1"]
-	group2 = contrasts[as.character(contrast), "Group2"]
+	message("[generateDiffBindReport] save file")
+	# generate file name
+	th = format(th, nsmall=2)
 	contrast.name = paste(group1, "-vs-", group2, sep="")
-	
-	# adjust if blocking factor used
 	if("Block1Val" %in% colnames(contrasts))
 	{
 		contrast.name = paste(contrast.name, ".blocking", sep="")
 	}
-
-	th = format(th, nsmall=2)
 	filename = paste(out.dir, "/diff_bind.", contrast.name, ".p", gsub(pattern="\\.", replacement="", x=th), ".csv", sep="")
-	cat("save as: ", filename, "\n")
-	write.csv(ann.merged, row.names=FALSE, file=filename)
+	message("[generateDiffBindReport] save as: ", filename)
+	write.csv(ann.merged, row.names=F, file=filename)
 }
 
-
-cat("\n ===== load data ===== \n")
+message(" ========== load data ========== ")
 
 # load data
 sampleSheet = read.csv(sampleSheetCsv)
-sampleSheet
-# db = dba(sampleSheet=sampleSheet, config=data.frame(AnalysisMethod=DBA_EDGER, th=0.05, cores=4))
+print(sampleSheet)
 db = dba(sampleSheet=sampleSheet, bCorPlot=F, config=data.frame(AnalysisMethod=DBA_DESEQ2, th=0.05, cores=4))
-db
+print(db)
 
-cat("\n ===== calculate binding matrix ===== \n")
+message(" ========== calculate binding matrix ========== ")
 
 # calculate a binding matrix with scores based on read counts for every sample (affinity scores),
 # rather than confidence scores for only those peaks called in a specific sample (occupancy scores)
@@ -88,7 +91,7 @@ db = dba.contrast(db, categories=DBA_CONDITION, minMembers=2)
 dbContrastRData = paste(outDir, "/db.contrast.RData", sep="")
 save(db, file=dbContrastRData)
 
-cat("\n ===== generate plots ===== \n")
+message(" ========== generate plots ========== ")
 
 # colors (combine multiple to prevent running out of colors)
 colors = c(brewer.pal(9, "Set1"), brewer.pal(8, "Accent"), brewer.pal(8, "Dark2"))
@@ -106,7 +109,7 @@ pdf(pcaPDF, family="Palatino", pointsize=10)
 dba.plotPCA(db, DBA_CONDITION, score=DBA_SCORE_RPKM, label=DBA_ID, vColors=colors, labelSize=0.6)
 dev.off()
 
-cat("\n ===== perform differential binding analysis ===== \n")
+message(" ========== perform differential binding analysis ========== ")
 
 # perform differential binding affinity analysis
 db = dba.analyze(db, bFullLibrarySize=T, bCorPlot=F)
@@ -120,8 +123,7 @@ contrasts = dba.show(db, bContrasts=T)
 contrasts = as.data.frame(contrasts)
 print(contrasts)
 
-
-cat("\n ===== retrieve annotations ===== \n")
+message(" ========== retrieve biomart annotations ========== ")
 
 # retrieve annotations
 if (genome == "hg19") {
@@ -133,21 +135,20 @@ if (genome == "mm10") {
 martEnsDF = getBM(attributes=c("ensembl_gene_id", "external_gene_name", "gene_biotype"), mart=martEns)
 martEnsTSS = getAnnotation(mart=martEns, featureType="TSS")
 
-
-cat("\n ===== generate reports ===== \n")
+message(" ========== generate reports ========== ")
 
 # generate report for each possible contrast with different cutoffs
 for (i in 1:length(row.names(contrasts))) {
 	print(contrasts[i,])
-	generateDiffBindReport(dba=db, contrast=i, th=0.05, method=DBA_DESEQ2, tss=martEnsTSS, mart.df=martEnsDF, reps=T, out.dir=outDir)
-	generateDiffBindReport(dba=db, contrast=i, th=0.20, method=DBA_DESEQ2, tss=martEnsTSS, mart.df=martEnsDF, reps=T, out.dir=outDir)
-	generateDiffBindReport(dba=db, contrast=i, th=1, method=DBA_DESEQ2, tss=martEnsTSS, mart.df=martEnsDF, reps=T, out.dir=outDir)
+	# using try to prevent "execution halted" that kills script if there are no significant results
+	try(generateDiffBindReport(dba=db, contrast=i, th=1.00, method=DBA_DESEQ2, tss=martEnsTSS, mart.df=martEnsDF, reps=T, out.dir=outDir))
+	try(generateDiffBindReport(dba=db, contrast=i, th=0.20, method=DBA_DESEQ2, tss=martEnsTSS, mart.df=martEnsDF, reps=T, out.dir=outDir))
+	try(generateDiffBindReport(dba=db, contrast=i, th=0.05, method=DBA_DESEQ2, tss=martEnsTSS, mart.df=martEnsDF, reps=T, out.dir=outDir))
 }
-
 
 # repeat with blocking factor if blocking factor parameter was passed
 if (!is.na(args[4])) {
-	cat("\n ===== re-analyze with blocking factor ===== \n")
+	message(" ========== re-analyze with blocking factor ========== ")
 	
 	# automatic contrasts with blocking factor
 	db = dba.contrast(db, categories=DBA_CONDITION, block=DBA_REPLICATE)
@@ -160,17 +161,17 @@ if (!is.na(args[4])) {
 	contrasts = as.data.frame(contrasts)
 	print(contrasts)
 
-	cat("\n ===== generate reports with blocking factor ===== \n")
+	message(" ========== generate reports with blocking factor ========== ")
 
 	# generate report for each possible contrast
 	for (i in 1:length(row.names(contrasts))) {
 		print(contrasts[i,])
-		generateDiffBindReport(dba=db, contrast=i, th=0.05, method=DBA_DESEQ2_BLOCK, tss=martEnsTSS, mart.df=martEnsDF, reps=T, out.dir=outDir)
-		generateDiffBindReport(dba=db, contrast=i, th=0.20, method=DBA_DESEQ2_BLOCK, tss=martEnsTSS, mart.df=martEnsDF, reps=T, out.dir=outDir)
-		generateDiffBindReport(dba=db, contrast=i, th=1, method=DBA_DESEQ2_BLOCK, tss=martEnsTSS, mart.df=martEnsDF, reps=T, out.dir=outDir)
+		# using try to prevent "execution halted" that kills script if there are no significant results
+		try(generateDiffBindReport(dba=db, contrast=i, th=1.00, method=DBA_DESEQ2_BLOCK, tss=martEnsTSS, mart.df=martEnsDF, reps=T, out.dir=outDir))
+		try(generateDiffBindReport(dba=db, contrast=i, th=0.20, method=DBA_DESEQ2_BLOCK, tss=martEnsTSS, mart.df=martEnsDF, reps=T, out.dir=outDir))
+		try(generateDiffBindReport(dba=db, contrast=i, th=0.05, method=DBA_DESEQ2_BLOCK, tss=martEnsTSS, mart.df=martEnsDF, reps=T, out.dir=outDir))
 	}
 }
-
 
 
 
