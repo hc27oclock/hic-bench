@@ -30,8 +30,8 @@ foreach d (__*)
   
   # check for errors
   scripts-send2err "Checking job log files for errors..."
-  ./code/code.main/pipeline-errors results >&! error.log
-  if (`cat error.log | wc -l` > 0) then
+  ./code/code.main/pipeline-errors results
+  if (`cat errors/error.log | wc -l` > 0) then
     scripts-send2err "Errors encountered, aborting!"
     exit 1
   endif

@@ -2023,10 +2023,10 @@ op_domains <- function(cmdline_args)
   for (k in 1:n_matrices) {
     f = paste(out_dir,'/boundaries.k=',formatC(k,width=3,format='d',flag='0'),'.tsv',sep='')
     w = which(dom$E[,k]==1)
-    write.table(t(rbind(rownames(dom$E)[w],round(dom$bscores[w,k],6))),file=f,sep='\t',row.names=F,col.names=F,quote=F)
+    write.table(t(rbind(rownames(dom$E)[w],round(dom$bscores[w,k],6))),file=f,sep='\t',row.names=F,col.names=F,quote=F)           # using boundary scores (with "local" normalized)
   }
     
-  # create boundary score files (all scoring methods) for each lambda
+  # create boundary score files (all scoring methods) for each lambda (using non-normalized boundary scores)
   for (k in 1:n_matrices) {
     f = paste(out_dir,'/all_scores.k=',formatC(k,width=3,format='d',flag='0'),'.tsv',sep='')
     score_table = cbind(rownames(dom$scores[[k]]),round(dom$scores[[k]],6))

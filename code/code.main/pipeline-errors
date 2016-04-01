@@ -13,6 +13,8 @@ endif
 set inpdir = $1
 set outdir = errors
 
+if (-e $outdir) rm -rf $outdir
+
 mkdir -p $outdir
 
 # first check job stderr output files
