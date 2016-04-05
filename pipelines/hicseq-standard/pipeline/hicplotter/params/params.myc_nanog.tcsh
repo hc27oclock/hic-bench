@@ -25,11 +25,11 @@ if (-e inputs/data.external/$cell_type/CTCF.bedGraph) then
 endif
 
 # regions to plot
-set regions = "chr8:125000000-133000000"
+set regions = (chr8:125000000-133000000 chr12:3940000-11950000)
 set tiles = "params/regions.bed"
 set tiles_labels = "regions"
-set highlight = 1
-set highlight_bed = "params/highlight.bed"
+set highlight = 0
+set highlight_bed = ""
 set fileheader = 0         # Either 1 or 0 (header / no header)
 set insulation_score = 0   # Either 1 or 0 (include insulation index or not)
 

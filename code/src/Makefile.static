@@ -37,6 +37,8 @@ tools-%: tools-%.cpp $(OBJ)
 
 hic-matrix: hic-matrix.cpp
 	R CMD SHLIB hic-matrix.cpp
+	rm hic-matrix.o
+	mv hic-matrix.so ../code.hicseq-standard
 	
 clean:
 	rm -f samtools/libbam.a *.o *.so $(BINDIR)/*tools-*

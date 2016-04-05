@@ -149,13 +149,13 @@ is_full_matrix <- function(mat)
 #
 # MatrixImpute
 #
-MatrixImpute <- function(mat,ignored_rows,ignored_cols) 
+MatrixImpute <- function(mat,ignored_rows,ignored_cols,impute45) 
 {
   if (min(mat,na.rm=TRUE)<0) { write("Error: imputation only works for non-negative matrices!", stderr()); quit(save='no') }
   na_value = -1
   mat[is.na(mat)] = na_value;
-  outmat = matrix(.C("impute",as.double(mat),nrow(mat),na_value,y=double(length(mat)))$y,nrow(mat))
-  outmat = (outmat+t(outmat))/2
+  outmat = matrix(.C("impute",as.double(mat),nrow(mat),na_value,impute45,y=double(length(mat)))$y,nrow(mat))
+  if (impute45==FALSE) outmat = (outmat+t(outmat))/2                   # if impute45 is false, then force matrix symmetricity
   outmat[ignored_rows,] = 0          # ignored bins are set to zero!
   outmat[,ignored_cols] = 0
   rownames(outmat) = rownames(mat)
@@ -312,7 +312,7 @@ MatrixInvDiag <- function(x)
 #
 # MatrixRotate45
 #
-MatrixRotate45 <- function(x,dist)
+MatrixRotate45 <- function(x,dist)            # TODO: this function cannot handle NA/Inf values
 {
   if (nrow(x)!=ncol(x)) { write('Error: MatrixRotate45 can only be used with square matrices!',stderr()); quit(save='no'); }
   N = nrow(x)*(dist+1)
@@ -583,7 +583,7 @@ op_estimate <- function(cmdline_args)
   # impute symmetric matrix or replace NAs with zeros
   if ((is_full_matrix(x)==TRUE)&(opt$"impute"==TRUE)) {
     if (opt$verbose) write('Imputing matrix...',stderr())
-    x = MatrixImpute(x,ignored_rows,ignored_cols)
+    x = MatrixImpute(x,ignored_rows,ignored_cols,impute45=FALSE)       # TODO: parametrize impute45?
     if (opt$verbose) write(paste('Imputed matrix symmetricity = ',sum(x==t(x))/length(x),sep=''),stderr())
   } else {
     x[is.na(x)] = 0
@@ -851,6 +851,7 @@ op_normalize <- function(cmdline_args)
     make_option(c("--min-mappability"), default=0.2, help="Minimum mappability [default \"%default\"]."),
     make_option(c("--scale"), action="store_true",default=FALSE, help="Scale matrix by total number of reads and effective length."),
     make_option(c("--impute"), action="store_true",default=FALSE, help="Impute matrix."),
+    make_option(c("--impute45"), action="store_true",default=FALSE, help="Impute matrix diagonally."),
     make_option(c("--replace-na"), action="store_true",default=FALSE, help="Replace all NA values with zero."),
     make_option(c("--dist"), default=0, help="Distance in number of bins [default \"%default\"].")
   )
@@ -870,7 +871,11 @@ op_normalize <- function(cmdline_args)
   # read files
   if (opt$verbose) write('Loading matrix...',stderr())
   x = as.matrix(read.table(fmatrix,row.names=1,check.names=F))
-  if (is_full_matrix(x)==FALSE) x = MatrixInverseRotate45(x)
+  if (is_full_matrix(x)==FALSE) {
+    opt$dist = ncol(x)-1                  # this is necessary so that after normalization, the matrix can be rotated again
+    if (opt$verbose) write('Inverse-rotating distance-restricted matrix...',stderr())
+    x = MatrixInverseRotate45(x)          # TODO: render this unnecessary by implementing normalization directly on distance-restricted matrices) 
+  }
   if (sum(rownames(x)!=colnames(x))>0) { write(paste('Error: row names and column names should be identical!',sep=''),stderr()); quit(save='no') }
   features = as.matrix(read.table(opt$features,row.names=1,check.names=F))
   colnames(features) = c('effective-length','GC-content','mappability')
@@ -910,9 +915,9 @@ op_normalize <- function(cmdline_args)
   }
 
   # impute symmetric matrix
-  if (opt$"impute"==TRUE) {
+  if ((opt$"impute"==TRUE)||(opt$"impute45"==TRUE)) {
     if (opt$verbose) write('Imputing matrix...',stderr())
-    y = MatrixImpute(y,ignored_rows,ignored_cols)
+    y = MatrixImpute(y,ignored_rows,ignored_cols,opt$"impute45")
     if (opt$verbose) {
       write(paste('Symmetricity of original matrix = ',sum(x==t(x))/length(x),sep=''),stderr())
       write(paste('Symmetricity of imputed matrix = ',sum(y==t(y))/length(y),sep=''),stderr())
@@ -1883,7 +1888,7 @@ IdentifyDomains = function(est, opt, full_matrix)
     }
     dom$scores[[k]] = MatrixBoundaryScores(z,distance=opt$distance,d2=opt$distance2,skip=opt$'skip-distance')       # non-normalized boundary scores, all methods
     dom$scores[[k]][est$ignored_rows,] = NA                                                                         # ignored rows have no score (i.e. NA)
-    if (opt$method=='inter') dom$bscores[,k] = max(dom$bscores[,k],na.rm=TRUE)-dom$bscores[,k]                      # reverse inter score
+    if (opt$method=='inter') dom$bscores[,k] = max(dom$bscores[,k],na.rm=TRUE)-dom$bscores[,k]                      # reverse inter score         # TODO: shouldn't this go below the next line??
     dom$bscores[,k] = local_maxima_score(dom$scores[[k]][,opt$method],maxd=opt$'flank-dist',scale=FALSE)            # local normalization (no scaling to [0,1])
     dom$bscores[,k] = dom$bscores[,k]/quantile(dom$bscores[,k],probs=0.99,na.rm=TRUE)                               # scale to top 1% (TODO: is this necessary, or should we just replace with max?)
 
@@ -1895,6 +1900,77 @@ IdentifyDomains = function(est, opt, full_matrix)
   
   return(dom)
 }
+
+
+
+###### IdentifyDomains_NEW
+
+IdentifyDomains_NEW = function(est, opt, full_matrix)
+{
+  # function: compute scores 
+  compute_scores = function(mat,opt,ignored_rows) 
+  {    
+    all_scores = MatrixBoundaryScores(mat,distance=opt$distance,d2=opt$distance2,skip=opt$'skip-distance')       # non-normalized boundary scores, all methods
+    all_scores[ignored_rows,] = NA                                                                               # ignored rows have no score (i.e. NA)
+    bscores = all_scores[,opt$method]                                                                            # select scoring method
+    if (opt$method=='inter') bscores = max(bscores,na.rm=TRUE)-bscores                                           # reverse inter score (if applicable)
+    return(bscores)
+  }
+
+  # function: randomize matrix
+  randomize_matrix = function(mat,distance)
+  {
+  
+  
+  }
+  
+  # start
+  n_matrices = dim(est$solObj)[1]
+  n_rows = nrow(est$y)
+  n_cols = ncol(est$y)
+  dom = {}
+  dom$scores = {}                              # boundary scores: all methods
+  dom$bscores = matrix(0,n_rows,n_matrices)    # "normalized" boundary scores, only selected method
+  dom$E = array(0,dim=c(n_rows,n_matrices))
+  rownames(dom$E) = rownames(est$y)
+  for (k in 1:n_matrices) {
+    if (opt$verbose) write(paste('-- matrix #',k,'...',sep=''),stderr())
+
+    # compute boundary scores
+    if (full_matrix) {
+      z = est$solObj[k,,]
+      rownames(z) = rownames(est$y)
+      colnames(z) = colnames(est$y)
+    } else {
+      if (opt$verbose) write('Inverse-rotating input matrices...',stderr())
+      z = MatrixInverseRotate45(est$solObj[k,,])
+      rownames(z) = colnames(z) = rownames(est$y)
+    }
+    
+    # compute scores    
+    dom$scores[[k]] = compute_scores(mat,opt,est$ignored_rows)
+
+    # randomize matrix and recompute scores
+    set.seed(001)
+    for (rnd in 1:10) {
+      x = compute_scores(randomize_matrix(mat,distance=opt$distance),opt,est$ignored_rows)             # randomize values within diagonals up to max distance
+    
+    }
+    
+#    dom$bscores[,k] = local_maxima_score(dom$scores[[k]][,opt$method],maxd=opt$'flank-dist',scale=FALSE)            # local normalization (no scaling to [0,1])
+#    dom$bscores[,k] = dom$bscores[,k]/quantile(dom$bscores[,k],probs=0.99,na.rm=TRUE)                               # scale to top 1% (TODO: is this necessary, or should we just replace with max?)
+
+    # identify local maxima
+    lmax = local_maxima(as.vector(dom$bscores[,k]),tolerance=opt$tolerance,alpha=opt$alpha,maxd=opt$'flank-dist')
+    
+    # store boundaries
+    dom$E[,k] = lmax
+  }
+  rownames(dom$bscores) = rownames(est$y)
+  
+  return(dom)
+}
+
 
 
 

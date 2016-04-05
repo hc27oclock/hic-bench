@@ -144,6 +144,32 @@ extern "C" void calc_counts_per_distance(double *v, int *n, double *y)
 
 
 
+//---- impute_diag -----
+//
+void impute_diag(double **mat, int n, double NaN)
+{
+  for (int d=0; d<n; d++) {      // walk across each diagonal
+    int k = 0;
+    while (k+d<n) {
+      if (mat[k][k+d]==NaN) {
+        int k0 = k;
+        int k1 = k;
+        for ( ; k1+1+d<n; k1++) if (mat[k1+1][k1+1+d]!=NaN) break;
+        if ((k0>0)||(k1+d<n)) { 
+          double v0 = k0-1>=0 ? mat[k0-1][k0-1+d] : 0;
+          double v1 = k1+1+d<n ? mat[k1+1][k1+1+d] : 0;
+          double a = (v1-v0)/(k1-k0+2);
+          if ((k0>0)||(k1+d<n-1)) for (int z=k0; z<=k1; z++) mat[z][z+d] = mat[z+d][z] = v0 + a*(z-k0+1);           // preserve symmetricity
+        }
+        k = k1+1;
+      } else {
+        k = k+1;
+      }
+    }
+  }
+}
+
+
 //---- impute_rows -----
 //
 void impute_rows(double **mat, int n, double NaN)
@@ -178,21 +204,25 @@ void impute_rows(double **mat, int n, double NaN)
 
 //---- impute -----
 //
-extern "C" void impute(double *v, int *n, double *NaN, double *y) 
+extern "C" void impute(double *v, int *n, double *NaN, int *impute45, double *y) 
 {
   // NOTE: this operation is only valid for symmetric matrices
   double **x = new double*[*n];
   for (int i=0; i<*n; i++) x[i] = new double[*n];
   for (int j=0,k=0; j<*n; j++) for (int i=0; i<*n; i++,k++) x[i][j] = v[k];
   
-  // impute
-  impute_rows(x,*n,*NaN);
-  
-  // transpose
-  for (int j=0; j<*n; j++) for (int i=j+1; i<*n; i++) { double t = x[i][j]; x[i][j] = x[j][i]; x[j][i] = t; }
-  
-  // impute again
-  impute_rows(x,*n,*NaN);
+  if (*impute45==1) {
+    // impute diagonally
+    impute_diag(x,*n,*NaN);
+  }
+  else {
+    // impute
+    impute_rows(x,*n,*NaN);
+    // transpose
+    for (int j=0; j<*n; j++) for (int i=j+1; i<*n; i++) { double t = x[i][j]; x[i][j] = x[j][i]; x[j][i] = t; }
+    // impute again
+    impute_rows(x,*n,*NaN);
+  }
   
   // convert to vector
   for (int j=0,k=0; j<*n; j++) for (int i=0; i<*n; i++,k++) y[k] = x[i][j];

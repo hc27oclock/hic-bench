@@ -20,7 +20,7 @@ set opt = "$1"
 # setup
 set op = matrix-prep
 set inpdirs = "inpdirs/*"
-set filter = ".res_[0-9]+kb/"               # This excludes distance-restricted matrices (maxd=...)
+set filter = "."
 set results = results
 scripts-create-path $results/
 scripts-send2err "=== Operation = $op ============="

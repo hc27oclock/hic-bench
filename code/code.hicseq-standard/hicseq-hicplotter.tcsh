@@ -66,7 +66,7 @@ end
 # Go through the regions
 set loop_bed = ""
 foreach region ($regions)
-  echo $region
+  scripts-send2err "region = $region"
   set chrom = `echo $region | cut -d':' -f1`
   set start = `echo $region | cut -d'-' -f1 | cut -d':' -f2`
   set stop = `echo $region | cut -d'-' -f2`
@@ -111,10 +111,14 @@ foreach region ($regions)
 
   #Run HiC-Plotter
   set p = `pwd`
-  set highlight_bed_path = `readlink -f $highlight_bed`
+  if ($highlight == 1) then
+    set highlight_opt = "-high $highlight -hf `readlink -f $highlight_bed`"
+  else 
+    set highlight_opt = 
+  endif
   set hicplotter_abs_path = `readlink -f $hicplotter_path`
   cd $workdir
-  python $hicplotter_abs_path -v -f $hic_matrices -n $region_labels -chr $chrom -s $start_bin -e $stop_bin -r $bin_size -o $region -t $all_tiles -tl $all_tiles_labels -hist $all_bedgraphs -hl $all_bedgraph_labels -fh $fileheader -pi $insulation_score -high $highlight -hf $highlight_bed_path  
+  python $hicplotter_abs_path -v -f $hic_matrices -n $region_labels -chr $chrom -s $start_bin -e $stop_bin -r $bin_size -o $region -t $all_tiles -tl $all_tiles_labels -hist $all_bedgraphs -hl $all_bedgraph_labels -fh $fileheader -pi $insulation_score $highlight_opt
   cd $p
 end
 

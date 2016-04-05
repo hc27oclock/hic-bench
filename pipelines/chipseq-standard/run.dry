@@ -30,14 +30,6 @@ foreach d (__*)
   cd $d
   ./run --dry-run
   
-  # check for errors
-  scripts-send2err "Checking job log files for errors..."
-  ./code/code.main/pipeline-errors results >&! error.log
-  if (`cat error.log | wc -l` > 0) then
-    scripts-send2err "Errors encountered, aborting!"
-    exit 1
-  endif
-  
   # go back to main directory
   cd $p
 end

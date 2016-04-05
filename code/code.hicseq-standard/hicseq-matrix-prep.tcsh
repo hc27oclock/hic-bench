@@ -48,7 +48,8 @@ foreach mat (`cd $inpdir; ls -1 matrix.*.tsv | grep -vwE "$chrom_excluded"`)
   scripts-send2err "Processing $mat [enzyme = $enzyme\; features = $features\; n_reads = $n_reads]..."
   
   # estimate required memory
-  set mem = `./code/calc-matrix-memory.tcsh $inpdir/$mat 1 5`
+  set n_rows = `cat $inpdir/$mat | wc -l`
+  set mem = `./code/calc-matrix-memory.tcsh $inpdir/$mat 1 5 $n_rows`      # TODO: force n_cols=n_rows, even for distance-restricted matrices, until hic-matrix normalize is updated
   scripts-send2err "requested memory = $mem"
 
   # run matrix prep
