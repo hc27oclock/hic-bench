@@ -34,11 +34,15 @@ if ($#objects != 1) then
   exit 1
 endif
 
+# create ignored loci file
+./code/create-ignored-loci.tcsh $genome_dir $bin_size >! $outdir/ignored_loci.txt
+
+# call domains for each chromosome
 set object1 = $objects[1]
 foreach f (`cd $branch/$object1; ls -1 matrix.*.tsv matrix.*.RData | grep -vwE "$chrom_excluded"`)
   set chr = `echo $f | cut -d'.' -f2`
   scripts-send2err "Processing matrix $f..."
-  Rscript ./code/hic-matrix.r domains -v -o $outdir/$chr --row-labels $hicmatrix_params $branch/$object1/$f
+  Rscript ./code/hic-matrix.r domains -v -o $outdir/$chr --row-labels --ignored-loci=$outdir/ignored_loci.txt $hicmatrix_params $branch/$object1/$f
 end
 
 # Collect domains from all chromosomes
