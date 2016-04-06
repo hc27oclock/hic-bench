@@ -12,6 +12,11 @@ cor1D <- function(x,y,method) { sapply(seq.int(dim(x)[1]),function(i) cor(as.vec
 # row correlations (2D)
 cor2D <- function(x,y,method) { sapply(seq.int(dim(x)[1]),function(i) cor(as.vector(x[i,,]),as.vector(y[i,,]),method=method)) }
 
+# modified cor function
+mycor <- function(x,y,method) {
+  if (method=='log2pearson') return(cor(log2(x+min(x[x>0])),log2(y+min(y[y>0])),method="pearson"))
+  return(cor(x,y,method=method))
+}
 
 # print_options
 print_options <- function(opt)
@@ -1950,6 +1955,7 @@ IdentifyDomainsNew = function(est, opt, full_matrix)
       for (rnd in 1:n_iterations) brnd_n = brnd_n + max(0,sum(find_boundaries(bscores_rnd[rnd,],opt,cutoff))-2)      #TODO: how do we avoid the use of max?
       q = brnd_n/n_iterations/b_n
       print(c(cutoff,q,b_n))
+      if (b_n==0) break
       if (q<=opt$fdr) break
     }
     return(b)
@@ -2471,8 +2477,8 @@ op_compare <- function(cmdline_args)
     make_option(c("--n-lambda"), default=2, help="Number of lambdas (only applicable if estimated max-lambda was set to Inf) [default=%default]."),
     make_option(c("--log2-lambda"), action="store_true",default=FALSE, help="Use log2 scale for lambda range (only applicable if estimated max-lambda was set to Inf)."),
     make_option(c("--gamma"), default=0.0, help="Value for sparsity parameter gamma (only applicable if estimated max-lambda was set to Inf) [default=%default]."),
-    make_option(c("--max-dist"), default=0, help="(Only for tsv files) Maximum distance from diagonal in number of bins [default \"%default\"]."),
-    make_option(c("--n-dist"), default=10, help="(Only for tsv files) Number of distances to be tested [default \"%default\"].")
+    make_option(c("--max-dist"), default=0, help="Maximum distance from diagonal in number of bins [default \"%default\"]."),
+    make_option(c("--n-dist"), default=1, help="(Only for tsv files) Number of distances to be tested [default \"%default\"].")
   )
   usage = 'hic-matrix.r compare [OPTIONS] MATRIX-1 MATRIX-2 (* matrices can be tsv or estimated RData)'
   
@@ -2517,8 +2523,8 @@ op_compare <- function(cmdline_args)
       if (e1$opt$'zone-size'!=e2$opt$'zone-size') { write('Error: the two matrices have been estimated using a different zone size!',stderr()); quit(save='no'); }
       max_dist = as.integer(e1$opt$'zone-size')
     }
-    a = c(1.0)   #c(0.5,1.0)
-    distances = unique(as.integer(a*max_dist))
+    if ((opt$"max-dist">0)&&(opt$"n-dist">0)) max_dist = min(max_dist,opt$"max-dist")
+    distances = max_dist                             # only one distance is allowed
 
     # open output PDF file
     pdf(paste(fout,'.pdf',sep=''));
@@ -2619,14 +2625,14 @@ op_compare <- function(cmdline_args)
     D = abs(row(mat1)-col(mat1)) + 1
 
     # compute correlations
-    methods = c("pearson","spearman")
+    methods = c("pearson","spearman","log2pearson")
     distances = rev(as.integer(1:opt$"n-dist"*(max_dist/opt$"n-dist")))
     for (m in methods) {
       C = matrix(0,1,length(distances))
       colnames(C) = c(paste("d=",distances,sep=''))
       for (k in 1:length(distances)) {
         d = distances[k]
-        C[k] = ifelse(full_matrix==TRUE,cor(as.vector(mat1[D<=d]),as.vector(mat2[D<=d]),method=m),cor(as.vector(mat1[,1:d]),as.vector(mat2[,1:d]),method=m))
+        C[k] = ifelse(full_matrix==TRUE,mycor(as.vector(mat1[D<=d]),as.vector(mat2[D<=d]),method=m),mycor(as.vector(mat1[,1:d]),as.vector(mat2[,1:d]),method=m))
       }
       C_table = cbind("0",round(C,4))
       colnames(C_table) = c("lambda",colnames(C))
