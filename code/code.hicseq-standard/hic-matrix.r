@@ -1788,7 +1788,8 @@ LoadEstimation = function(filename, options, replace.na)
     est$x = x
     est$y = y
     est$ignored_rows = sort(unique(ignored_rows))
-    est$ignored_cols = sort(unique(ignored_cols))     # TODO: ignored_cols is set to NULL, produces warning
+    est$preprocess = opt$preprocess
+    if (is.null(ignored_cols)) { est$ignored_cols = integer(0) } else { est$ignored_cols = sort(unique(ignored_cols)) }
     if (opt$"max-lambda"==Inf) {                      # extract specific lambdas (found in options) if max-lambda=Inf
       # create gamma/lambda values (zero always included if log2 scale)
       est$gammas = opt$gammas
@@ -1837,6 +1838,7 @@ LoadEstimation = function(filename, options, replace.na)
     est$y = PreprocessMatrix(est$x,preprocess=options$preprocess,pseudo=1,cutoff=1)
     est$solObj = array(0,dim=c(1,dim(est$x)[1],dim(est$x)[2]))
     est$solObj[1,,] = est$y
+    est$preprocess = options$preprocess
   }
 
   # create submatrix
@@ -1903,14 +1905,15 @@ IdentifyDomains = function(est, opt, full_matrix)
 
 
 
-###### IdentifyDomains_NEW
 
-IdentifyDomains_NEW = function(est, opt, full_matrix)
+###### IdentifyDomainsNew
+
+IdentifyDomainsNew = function(est, opt, full_matrix)
 {
   # function: compute scores 
   compute_scores = function(mat,opt,ignored_rows) 
   {    
-    all_scores = MatrixBoundaryScores(mat,distance=opt$distance,d2=opt$distance2,skip=opt$'skip-distance')       # non-normalized boundary scores, all methods
+    all_scores = MatrixBoundaryScores(mat,distance=opt$distance,d2=opt$distance2,skip=opt$'skip-distance')       # non-normalized boundary scores, all methods   (TODO: avoid computing all scores!)
     all_scores[ignored_rows,] = NA                                                                               # ignored rows have no score (i.e. NA)
     bscores = all_scores[,opt$method]                                                                            # select scoring method
     if (opt$method=='inter') bscores = max(bscores,na.rm=TRUE)-bscores                                           # reverse inter score (if applicable)
@@ -1920,23 +1923,55 @@ IdentifyDomains_NEW = function(est, opt, full_matrix)
   # function: randomize matrix
   randomize_matrix = function(mat,distance)
   {
+    D = row(mat)-col(mat)
+    for (d in -distance:distance) mat[D==d] = sample(mat[D==d])
+    return(mat)
+  }
   
+  # function: find boundaries as local maxima
+  find_boundaries = function(bscores,opt,cutoff)
+  {
+#    bscores = local_maxima_score(bscores,maxd=opt$'flank-dist',scale=FALSE)                                      # local normalization (no scaling to [0,1])
+    b = local_maxima(as.vector(bscores),tolerance=opt$tolerance,alpha=cutoff,maxd=opt$'flank-dist')               # boundaries are local maxima of boundary scores
+    return(b)
+  }
   
+  # function: find boundaries (FDR-controlled)
+  find_boundaries_with_fdr = function(bscores,bscores_rnd,opt,n_borders)
+  {
+    c_max = max(bscores,na.rm=TRUE)
+    c_min = 0
+    cutoffs = unique(sort(bscores))
+    cutoffs = cutoffs[seq(length(cutoffs)/2,length(cutoffs),by=5)]
+    for (cutoff in cutoffs) {
+      b = find_boundaries(bscores,opt,cutoff)
+      b_n = max(0,sum(b)-n_borders)
+      brnd_n = 0
+      for (rnd in 1:n_iterations) brnd_n = brnd_n + max(0,sum(find_boundaries(bscores_rnd[rnd,],opt,cutoff))-2)      #TODO: how do we avoid the use of max?
+      q = brnd_n/n_iterations/b_n
+      print(c(cutoff,q,b_n))
+      if (q<=opt$fdr) break
+    }
+    return(b)
   }
   
   # start
-  n_matrices = dim(est$solObj)[1]
+  if (opt$verbose) write('Using new method for TAD calling...',stderr())
+  n_iterations = 2                                   # number of randomizations
+  n_matrices = dim(est$solObj)[1]                    # number of matrices (i.e. number of lambda values)
   n_rows = nrow(est$y)
   n_cols = ncol(est$y)
-  dom = {}
-  dom$scores = {}                              # boundary scores: all methods
-  dom$bscores = matrix(0,n_rows,n_matrices)    # "normalized" boundary scores, only selected method
-  dom$E = array(0,dim=c(n_rows,n_matrices))
+  dom = {}                                           # domains data structure
+  dom$scores = {}                                    # boundary scores: all methods
+  dom$bscores = matrix(0,n_rows,n_matrices)          # "normalized" boundary scores: only selected method
+  dom$E = array(0,dim=c(n_rows,n_matrices))          # local maxima (i.e. boundaries)
   rownames(dom$E) = rownames(est$y)
+  
+  # repeat for each matrix
   for (k in 1:n_matrices) {
     if (opt$verbose) write(paste('-- matrix #',k,'...',sep=''),stderr())
 
-    # compute boundary scores
+    # process matrix
     if (full_matrix) {
       z = est$solObj[k,,]
       rownames(z) = rownames(est$y)
@@ -1947,29 +1982,39 @@ IdentifyDomains_NEW = function(est, opt, full_matrix)
       rownames(z) = colnames(z) = rownames(est$y)
     }
     
-    # compute scores    
-    dom$scores[[k]] = compute_scores(mat,opt,est$ignored_rows)
+    if (est$preprocess=='log2') z = 2^z
+    
+    # first, calculate all scores (all methods)
+    dom$scores[[k]] = MatrixBoundaryScores(z,distance=opt$distance,d2=opt$distance2,skip=opt$'skip-distance')
+    dom$scores[[k]][est$ignored_rows,] = NA
+    
+    # compute boundary scores for selected method
+    dom$bscores[,k] = compute_scores(z,opt,est$ignored_rows)
 
     # randomize matrix and recompute scores
+    if (opt$verbose) write('Randomizing input matrix...',stderr())
+    if (length(est$ignored_rows)>0) {
+      z_rnd = MatrixRotate45(z[-est$ignored_rows,-est$ignored_rows],opt$distance)
+    } else {
+      z_rnd = MatrixRotate45(z,opt$distance)
+    }
+    bscores_rnd = matrix(0,n_iterations,nrow(z_rnd))
     set.seed(001)
-    for (rnd in 1:10) {
-      x = compute_scores(randomize_matrix(mat,distance=opt$distance),opt,est$ignored_rows)             # randomize values within diagonals up to max distance
-    
+    for (rnd in 1:n_iterations) {
+      z_rnd = apply(z_rnd,2,sample)
+      bscores_rnd[rnd,] = compute_scores(MatrixInverseRotate45(z_rnd),opt,integer(0))
     }
     
-#    dom$bscores[,k] = local_maxima_score(dom$scores[[k]][,opt$method],maxd=opt$'flank-dist',scale=FALSE)            # local normalization (no scaling to [0,1])
-#    dom$bscores[,k] = dom$bscores[,k]/quantile(dom$bscores[,k],probs=0.99,na.rm=TRUE)                               # scale to top 1% (TODO: is this necessary, or should we just replace with max?)
-
     # identify local maxima
-    lmax = local_maxima(as.vector(dom$bscores[,k]),tolerance=opt$tolerance,alpha=opt$alpha,maxd=opt$'flank-dist')
-    
-    # store boundaries
-    dom$E[,k] = lmax
+    if (opt$verbose) write('Identifying domains at specified FDR...',stderr())
+    n_borders = sum(est$ignored_rows[-1]-est$ignored_rows[-length(est$ignored_rows)]>1) + 2        # borders: bins adjacent to ignored regions
+    dom$E[,k] = find_boundaries_with_fdr(dom$bscores[,k],bscores_rnd,opt,n_borders)
   }
   rownames(dom$bscores) = rownames(est$y)
   
   return(dom)
 }
+
 
 
 
@@ -1999,6 +2044,7 @@ op_domains <- function(cmdline_args)
     make_option(c("--method"), default="ratio", help="Boundary score method: ratio, diffratio, intra-max, intra-min, intra-right, intra-left, inter, diff, DI, product-max, product-min [default \"%default\"]."),
     make_option(c("--tolerance"), default=0.01, help="Percent difference cutoff for merging local maxima [default \"%default\"]."),
     make_option(c("-a","--alpha"), default=0.10, help="Minimum difference by which local maxima are greater than neighboring values [default \"%default\"]."),
+    make_option(c("--fdr"), default=1.0, help="False discovery rate cutoff [default \"%default\"]."),
     make_option(c("--flank-dist"), default=10, help="Local maxima neighborhood radius (in number of bins) [default \"%default\"]."),
     make_option(c("--track-dist"), default=10, help="Maximum distance (number of bins) from diagonal for track generation  [default=%default]."),
     make_option(c("--bins"), default="", help="Comma-separated bins to be highlighted [default \"%default\"]."),
@@ -2034,8 +2080,11 @@ op_domains <- function(cmdline_args)
   # compute boundary scores
   if (opt$verbose) { write("Computing boundary scores...",stderr()); }
   full_matrix = is_full_matrix(est$y)
-  dom = IdentifyDomains(est,opt,full_matrix)
-  
+  if (opt$fdr<1) { 
+    dom = IdentifyDomainsNew(est,opt,full_matrix)
+  } else { 
+    dom = IdentifyDomains(est,opt,full_matrix)
+  }
   # setup presentation style
   n_matrices = dim(est$solObj)[1]
   n_rows = nrow(est$x)

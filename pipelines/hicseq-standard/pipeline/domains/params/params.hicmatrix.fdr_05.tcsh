@@ -15,7 +15,7 @@ set hicmatrix_params = ( \
 --skip-distance=0 \
 --flank-dist=`echo 500000/$bin_size | bc` \
 --tolerance=0.01 \
---alpha=0.25 \
+--fdr=0.05 \
 --track-dist=`echo 2000000/$bin_size | bc` \
 --presentation=none \
 )
