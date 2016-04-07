@@ -1936,26 +1936,37 @@ IdentifyDomainsNew = function(est, opt, full_matrix)
   # function: find boundaries as local maxima
   find_boundaries = function(bscores,opt,cutoff)
   {
-#    bscores = local_maxima_score(bscores,maxd=opt$'flank-dist',scale=FALSE)                                      # local normalization (no scaling to [0,1])
+#    bscores = local_maxima_score(bscores,maxd=opt$'flank-dist',scale=FALSE)                                      # local normalization (no scaling to [0,1]) [ TODO: enable this as an option? ]
     b = local_maxima(as.vector(bscores),tolerance=opt$tolerance,alpha=cutoff,maxd=opt$'flank-dist')               # boundaries are local maxima of boundary scores
     return(b)
   }
   
   # function: find boundaries (FDR-controlled)
-  find_boundaries_with_fdr = function(bscores,bscores_rnd,opt,n_borders)
+  find_boundaries_with_fdr = function(bscores,bscores_rnd,opt,ignored_rows)
   {
+    n_borders = 2*sum(ignored_rows[-1]-ignored_rows[-length(ignored_rows)]>1)        # borders: bins adjacent to ignored regions
     c_max = max(bscores,na.rm=TRUE)
     c_min = 0
     cutoffs = unique(sort(bscores))
     cutoffs = cutoffs[seq(length(cutoffs)/2,length(cutoffs),by=5)]
     for (cutoff in cutoffs) {
+      # find boundaries on observed input
       b = find_boundaries(bscores,opt,cutoff)
-      b_n = max(0,sum(b)-n_borders)
-      brnd_n = 0
-      for (rnd in 1:n_iterations) brnd_n = brnd_n + max(0,sum(find_boundaries(bscores_rnd[rnd,],opt,cutoff))-2)      #TODO: how do we avoid the use of max?
-      q = brnd_n/n_iterations/b_n
-      print(c(cutoff,q,b_n))
-      if (b_n==0) break
+      n_b = sum(b) - n_borders                                      # borders are not included in the boundary count, because they appear deterministically
+      if (n_b<0) { write('Error: b boundary count less than 0!',stderr()); quit(save='no') }
+      
+      # find boundaries on randomized inputs
+      n_brnd = 0
+      for (rnd in 1:n_iterations) {
+        brnd = find_boundaries(bscores_rnd[rnd,],opt,cutoff)        # note: randomized matrices do not include ignored regions, therefore they have only edges
+        brnd[1] = brnd[length(brnd)] = 0                            # edges are not included in the boundary count, because they appear deterministically
+        n_brnd = n_brnd + sum(brnd)                                 # count of randomly discovered boundaries
+      }  
+      
+      # calculate FDR
+      q = n_brnd/n_iterations/n_b
+      print(c(cutoff,q,n_b))
+      if (n_b==0) break
       if (q<=opt$fdr) break
     }
     return(b)
@@ -2011,8 +2022,7 @@ IdentifyDomainsNew = function(est, opt, full_matrix)
     
     # identify local maxima
     if (opt$verbose) write('Identifying domains at specified FDR...',stderr())
-    n_borders = sum(est$ignored_rows[-1]-est$ignored_rows[-length(est$ignored_rows)]>1) + 2        # borders: bins adjacent to ignored regions
-    dom$E[,k] = find_boundaries_with_fdr(dom$bscores[,k],bscores_rnd,opt,n_borders)
+    dom$E[,k] = find_boundaries_with_fdr(dom$bscores[,k],bscores_rnd,opt,est$ignored_rows)              # identify boundaries
   }
   rownames(dom$bscores) = rownames(est$y)
   
@@ -2238,7 +2248,7 @@ local_maxima = function(x,tolerance,alpha,maxd)
   d = which(is.na(x))
   di = which(d[-1]-d[-length(d)]>1)
   y[sort(c(d[di]+1,d[di+1]-1))] = 1
-
+  
   #plot(x,type='l'); i=which(y==1); points(i,x[i],col='red',pch=18); j=which(y==-1); #points(j,x[j],col='blue',pch=18);  
   y[y==-1] = 0
 
@@ -2617,10 +2627,10 @@ op_compare <- function(cmdline_args)
     mat2[is.na(mat2)] = 0
 
     # distance from diagonal
-    max_dist = ncol(mat1)
-    if ((opt$"max-dist">0)&&(opt$"n-dist">0)) max_dist = min(max_dist,opt$"max-dist")
     full_matrix = is_full_matrix(mat1)
-    D = abs(row(mat1)-col(mat1)) + 1
+    max_dist = ncol(mat1) - 1
+    if ((opt$"max-dist">0)&&(opt$"n-dist">0)) max_dist = min(max_dist,opt$"max-dist")          # limit max-dist according to input params
+    D = abs(row(mat1)-col(mat1))
 
     # compute correlations
     methods = c("pearson","spearman","log2pearson")
@@ -2630,7 +2640,7 @@ op_compare <- function(cmdline_args)
       colnames(C) = c(paste("d=",distances,sep=''))
       for (k in 1:length(distances)) {
         d = distances[k]
-        C[k] = ifelse(full_matrix==TRUE,mycor(as.vector(mat1[D<=d]),as.vector(mat2[D<=d]),method=m),mycor(as.vector(mat1[,1:d]),as.vector(mat2[,1:d]),method=m))
+        C[k] = ifelse(full_matrix==TRUE,mycor(as.vector(mat1[D<=d]),as.vector(mat2[D<=d]),method=m),mycor(as.vector(mat1[,1:(d+1)]),as.vector(mat2[,1:(d+1)]),method=m))
       }
       C_table = cbind("0",round(C,4))
       colnames(C_table) = c("lambda",colnames(C))

@@ -33,11 +33,14 @@ scripts-create-path $outdir/
 # -------------------------------------
 
 scripts-send2err "Generating correlograms..."
-set methods = "pearson spearman"
+set methods = `cd $branch/$objects[1]; ls -1 cor.*.tsv | cut -d'.' -f2 | sort -u`
 foreach method ($methods)
   scripts-create-path $outdir/$method/ 
   set files = `echo "$branch\t$objects" | tools-key-expand | tr '\t' '/' | sed 's/$/\/'"cor.$method.tsv/"`
-  cat $files >! $outdir/$method/cor.$method.tsv
+  head -1 $files[1] >! $outdir/$method/cor.$method.tsv
+  foreach f ($files)
+    cat $f | scripts-skipn 1 >> $outdir/$method/cor.$method.tsv
+  end
   Rscript ./code/correlogram-matrices.r $outdir/$method/cor.$method.tsv
 end
 

@@ -40,9 +40,15 @@ end
 
 # Collect all the pearson and spearman coefficients along with sample and lambda info
 set comp = `basename $outdir`
-set methods = "pearson spearman"
+set methods = `cd $outdir; ls -1 *.cor.*.tsv | cut -d'.' -f3 | sort -u`
+set header = `cd $outdir; cat *.cor.*.tsv | head -1 | cut -f2-`
 foreach method ($methods)
-  cat $outdir/*.cor.$method.tsv | grep -v lambda | sed "s/^/$object1	$object2	${comp}	${method}	/" >! $outdir/cor.$method.tsv
+  echo "SAMPLE-1 SAMPLE-2 COMPARISON METHOD CHROMOSOME LAMBDA $header" | tr ' ' '\t' >! $outdir/cor.$method.tsv
+  foreach f ($outdir/*.cor.$method.tsv)
+    set chr = `basename $f | cut -d'.' -f1`
+    cat $f | scripts-skipn 1 | sed "s/^/$object1\t$object2\t$comp\t$method\t$chr\t/" >> $outdir/cor.$method.tsv
+  end
+  rm -f $outdir/*.cor.$method.tsv
 end 
 
 # -------------------------------------

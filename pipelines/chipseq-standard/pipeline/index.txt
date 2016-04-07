@@ -1,8 +1,8 @@
 align
 align-stats
 
-qc
 fastqc
+qc
 
 peaks
 peaktable
