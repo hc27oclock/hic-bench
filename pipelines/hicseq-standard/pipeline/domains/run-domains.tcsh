@@ -24,7 +24,7 @@ set filter = "*.res_40kb"                  # work only with 40kb resolution
 set results = results
 scripts-create-path $results/
 scripts-send2err "=== Operation = $op ============="
-set resources = 1,20G
+set resources = 1,25G
 set cmd = "./code/code.main/scripts-qsub-wrapper $resources ./code/hicseq-$op.tcsh"
 
 # generate run script
