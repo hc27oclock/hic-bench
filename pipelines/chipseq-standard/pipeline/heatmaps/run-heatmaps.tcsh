@@ -7,9 +7,10 @@ source ./code/code.main/custom-tcshrc      # customize shell environment
 
 # ~~~ Entries for auto-report ~~~ #
 #TITLE: Heatmaps
-#XFIGUREX: clustering.png #Keep this disabled until convert code is added
+#FIGURE: clustering.png
 #PARAMS: params.mean.tcsh params.standard.tcsh
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+# note: clustering.png file is created currently by TIF conversion from code in the ChIP-Seq report
 
 # process command-line inputs
 if ($#argv > 1) then
