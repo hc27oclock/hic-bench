@@ -1,0 +1,34 @@
+#!/bin/tcsh
+
+##
+## USAGE: pipeline-sync
+##
+
+if ($#argv != 0) then
+  grep '^##' $0
+  exit
+endif
+
+# init
+set repo_code_dir = ~/pipeline-master/code
+set analysis_dir = `readlink -f $0 | sed 's/pipeline-sync$//'`/../..
+cd $analysis_dir
+set analysis_dir = `pwd`
+set pipeline_name = `readlink -f code | sed 's/.*\.//'`
+
+echo "Repository code directory = $repo_code_dir"
+echo "Analysis directory = $analysis_dir"
+echo "Pipeline = $pipeline_name"
+
+# sync (dry-run first)
+rsync -nauv --exclude=src $repo_code_dir/ code.repo
+echo -n "Sync? Type 'YES' to proceed: "
+set x = $<
+if ($x == YES) then
+  rsync -auv --exclude=src $repo_code_dir/ code.repo
+endif
+
+
+
+
+
