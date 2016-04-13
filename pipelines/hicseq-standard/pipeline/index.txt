@@ -24,6 +24,7 @@ boundary-scores
 boundary-scores-pca
 
 domains
+domains-stats
 
 compare-boundaries
 compare-boundaries-stats
