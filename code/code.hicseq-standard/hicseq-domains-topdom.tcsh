@@ -45,7 +45,7 @@ foreach est_mat ($est_matrices)
     cat $inpdir/$est_mat >! $workdir/tmp/matrix.k=001.tsv
   endif
   
-  # convert matrices and run caltads
+  # convert matrices and run TopDom
   foreach mat ($workdir/tmp/matrix.*.tsv)
     set pref = `basename $mat .tsv | sed 's/^matrix\.//'`.$chr
     set inpmat = $pref.matrix.txt

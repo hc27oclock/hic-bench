@@ -37,8 +37,7 @@ scripts-create-path $outdir/
 
 # setup
 set inpdir = $branch/$object
-set filter_branch = ../filter/results/`echo $branch | sed 's/.*\/\(filter\.\)/\1/'`
-set n_reads = `cat $filter_branch/$object/stats.tsv | grep '^ds-accepted-intra	' | cut -f2`
+set n_reads = `cat $branch/$object/stats.tsv | grep '^ds-accepted-intra	' | cut -f2`
 set res = `echo $bin_size/1000 | bc`
 set features = $genome_dir/features-hicnorm/$enzyme.w=${res}kb.features.txt 
 

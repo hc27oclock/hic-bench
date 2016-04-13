@@ -87,6 +87,6 @@ write.table(enrich,file=sprintf("%s", enrich_f),quote=FALSE,sep="\t",row.names=T
 # write.table(enr)
 out <- paste(outdir,"enrichment.pdf",sep="/")
 pdf(sprintf("%s",out), useDingbats=FALSE)
-corrplot(enrich, is.corr=FALSE, order="alphabet", method="circle", tl.pos="lt", tl.col="blue", cl.pos="b", tl.srt=45, tl.cex=0.8)
+corrplot(enrich, is.corr=FALSE, order="alphabet", method="circle", tl.pos="lt", tl.col="blue", cl.pos="b", tl.srt=45, tl.cex=0.8, cl.lim=c(1,max(enrich,na.rm=TRUE)))
 dev.off() 
 

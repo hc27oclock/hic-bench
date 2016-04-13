@@ -10,8 +10,8 @@ if ($#argv != 0) then
 endif
 
 # init
-set repo_code_dir = ~/pipeline-master/code
 set analysis_dir = `readlink -f $0 | sed 's/pipeline-sync$//'`/../..
+set repo_code_dir = code.origin
 cd $analysis_dir
 set analysis_dir = `pwd`
 set pipeline_name = `readlink -f code | sed 's/.*\.//'`

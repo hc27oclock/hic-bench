@@ -38,6 +38,10 @@ scripts-create-path $outdir/
 set filtered_reads = `echo $objects | tr ' ' '\n' | awk -v d=$branch '{print d"/"$0"/filtered.reg.gz"}'`
 scripts-smartcat $filtered_reads | gtools-hic matrix -v -p $outdir/matrix. $matrix_params
 
+# calculate statistics
+set stats = `echo $objects | tr ' ' '\n' | awk -v d=$branch '{print d"/"$0"/stats.tsv"}'`
+cat $stats | cut -f-2 | sort | tools-mergeuniq -merge | tools-vectors sum -n 0 >! $outdir/stats.tsv
+
 # -------------------------------------
 # -----  MAIN CODE ABOVE --------------
 # -------------------------------------

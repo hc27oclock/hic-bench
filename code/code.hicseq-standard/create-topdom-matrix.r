@@ -23,6 +23,7 @@ input_matrix <- args[1]
 out_matrix   <- args[2]
 
 df1 <- read.table(sprintf("%s", input_matrix), header=TRUE, row.names=1, stringsAsFactors=FALSE)
+df1 <- df1 + 0.1           # TODO: we added this small number to the matrix at the suggestion of the TopDom developer, in an attempt to avoid a bug in TopDom
 rows <- rownames(df1)
 
 #Prepare vectors to save the components of rhe rownames

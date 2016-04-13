@@ -1932,18 +1932,64 @@ IdentifyDomainsNew = function(est, opt, full_matrix)
     for (d in -distance:distance) mat[D==d] = sample(mat[D==d])
     return(mat)
   }
+
+  # function: identify local maxima  
+  local_maxima_new = function(x,tolerance,alpha,maxd)
+  {
+    n = length(x)
+    y = rep(0,n)
+    x_order = order(x,decreasing=TRUE,na.last=NA)
+    kk = 1
+    while (kk<=length(x_order)) {
+      k = x_order[kk]
+      minval_left = min(x[max(k-maxd,1):k],na.rm=TRUE)                                                                    # minimum value to the left of k
+      minval_right = min(x[k:min(k+maxd,n)],na.rm=TRUE)                                                                   # minimum value to the right of k
+      minpos_left = max(k-maxd,1) + min(which(x[max(k-maxd,1):k]<=minval_left)) - 1                                       # minimum left position
+      minpos_right = k + max(which(x[k:min(k+maxd,n)]<=minval_right)) - 1                                                 # minimum value to the right of k
+      while ((minpos_left>1)&(!is.na(x[minpos_left]))&(x[minpos_left]<=minval_left)) minpos_left = minpos_left-1          # extend left position if lower (or equal) values are found
+      while ((minpos_right<n)&(!is.na(x[minpos_right]))&(x[minpos_right]<=minval_right)) minpos_right = minpos_right+1    # extend right position if lower (or equal) values are found
+      for (j in minpos_left:minpos_right) if (y[j]==0) y[j] = -1                                                          # mask these bins from subsequent computations
+      if (x[k]>=alpha) y[k] = 1
+      while ((kk<=length(x_order))&&(y[x_order[kk]]!=0)) kk = kk + 1
+    }  
+
+    # add boundaries at NA values  
+    d = which(is.na(x))
+    di = which(d[-1]-d[-length(d)]>1)
+    y[sort(c(d[di]+1,d[di+1]-1))] = 1
   
+    #plot(x,type='l'); i=which(y==1); points(i,x[i],col='red',pch=18); j=which(y==-1); #points(j,x[j],col='blue',pch=18);  
+    y[y==-1] = 0
+
+    return(y)
+  }
+
   # function: find boundaries as local maxima
   find_boundaries = function(bscores,opt,cutoff)
   {
 #    bscores = local_maxima_score(bscores,maxd=opt$'flank-dist',scale=FALSE)                                      # local normalization (no scaling to [0,1]) [ TODO: enable this as an option? ]
-    b = local_maxima(as.vector(bscores),tolerance=opt$tolerance,alpha=cutoff,maxd=opt$'flank-dist')               # boundaries are local maxima of boundary scores
+    b = local_maxima_new(as.vector(bscores),tolerance=opt$tolerance,alpha=cutoff,maxd=opt$'flank-dist')               # boundaries are local maxima of boundary scores
     return(b)
   }
   
-  # function: find boundaries (FDR-controlled)
-  find_boundaries_with_fdr = function(bscores,bscores_rnd,opt,ignored_rows)
+  # function: calculate boundary score cutoff for specified FDR
+  calc_bscore_cutoff = function(bscores,opt,ignored_rows,n_iterations)
   {
+    # randomize matrix and recompute scores
+    if (opt$verbose) write('Randomizing input matrix...',stderr())
+    if (length(ignored_rows)>0) {
+      z_rnd = MatrixRotate45(z[-ignored_rows,-ignored_rows],opt$distance)
+    } else {
+      z_rnd = MatrixRotate45(z,opt$distance)
+    }
+    bscores_rnd = matrix(0,n_iterations,nrow(z_rnd))
+    set.seed(001)
+    for (rnd in 1:n_iterations) {
+      z_rnd = apply(z_rnd,2,sample)
+      bscores_rnd[rnd,] = compute_scores(MatrixInverseRotate45(z_rnd),opt,integer(0))
+    }
+    
+    # calculate cutoff
     n_borders = 2*sum(ignored_rows[-1]-ignored_rows[-length(ignored_rows)]>1)        # borders: bins adjacent to ignored regions
     c_max = max(bscores,na.rm=TRUE)
     c_min = 0
@@ -1966,10 +2012,10 @@ IdentifyDomainsNew = function(est, opt, full_matrix)
       # calculate FDR
       q = n_brnd/n_iterations/n_b
       print(c(cutoff,q,n_b))
-      if (n_b==0) break
-      if (q<=opt$fdr) break
+      if (n_b==0) return(cutoff)
+      if (q<=opt$fdr) return(cutoff)
     }
-    return(b)
+    return(cutoffs[length(cutoffs)])
   }
   
   # start
@@ -2006,23 +2052,13 @@ IdentifyDomainsNew = function(est, opt, full_matrix)
     # compute boundary scores for selected method
     dom$bscores[,k] = compute_scores(z,opt,est$ignored_rows)
 
-    # randomize matrix and recompute scores
-    if (opt$verbose) write('Randomizing input matrix...',stderr())
-    if (length(est$ignored_rows)>0) {
-      z_rnd = MatrixRotate45(z[-est$ignored_rows,-est$ignored_rows],opt$distance)
-    } else {
-      z_rnd = MatrixRotate45(z,opt$distance)
-    }
-    bscores_rnd = matrix(0,n_iterations,nrow(z_rnd))
-    set.seed(001)
-    for (rnd in 1:n_iterations) {
-      z_rnd = apply(z_rnd,2,sample)
-      bscores_rnd[rnd,] = compute_scores(MatrixInverseRotate45(z_rnd),opt,integer(0))
-    }
+    # identify boundary score cutoff (only for first matrix)
+    #if (k==1) bscore_cutoff = calc_bscore_cutoff(dom$bscores[,k],opt,est$ignored_rows,n_iterations)
+    bscore_cutoff = calc_bscore_cutoff(dom$bscores[,k],opt,est$ignored_rows,n_iterations)
     
-    # identify local maxima
+    # identify boundaries as local maxima of boundary scores
     if (opt$verbose) write('Identifying domains at specified FDR...',stderr())
-    dom$E[,k] = find_boundaries_with_fdr(dom$bscores[,k],bscores_rnd,opt,est$ignored_rows)              # identify boundaries
+    dom$E[,k] = find_boundaries(dom$bscores[,k],opt,bscore_cutoff)
   }
   rownames(dom$bscores) = rownames(est$y)
   

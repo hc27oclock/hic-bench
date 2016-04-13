@@ -15,7 +15,9 @@ set symlink = $3
 
 mkdir -p $analysis_dir
 
+# setup link to original code repo
 set repo_code_dir = `readlink -f $0 | sed 's/\/[^/]\+$//'`/..
+ln -s $repo_code_dir code.origin
 
 # copy pipeline structure to new analysis directory
 echo "Copying pipeline structure and code into $analysis_dir..."
