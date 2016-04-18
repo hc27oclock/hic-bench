@@ -71,12 +71,13 @@ colnames(x1) = colnames(x2) = c("locus","marks")
 
 # First find the frequency entries that are represented in the top interactions selected
 freq <- read.table(freq_file, header=FALSE, row.names=1, stringsAsFactors=FALSE, check.names=FALSE)
+save(annot2_m2,freq,file='x.RData')
 
 # Now calculate the enrichment
 common = intersect(rownames(annot2_m2),rownames(freq))
-r = !is.na(match(rownames(freq),common))
-freq = as.vector(freq[r,1])
-r = !is.na(match(rownames(annot2_m2),common))
+r = rownames(freq) %in% common
+freq = freq[r,1]
+r = which(rownames(annot2_m2) %in% common)
 annot2_m2 = annot2_m2[r,r,drop=FALSE]
 enrich <- t((annot2_m2/cutoff)/freq)/freq
 
@@ -87,6 +88,6 @@ write.table(enrich,file=sprintf("%s", enrich_f),quote=FALSE,sep="\t",row.names=T
 # write.table(enr)
 out <- paste(outdir,"enrichment.pdf",sep="/")
 pdf(sprintf("%s",out), useDingbats=FALSE)
-corrplot(enrich, is.corr=FALSE, order="alphabet", method="circle", tl.pos="lt", tl.col="blue", cl.pos="b", tl.srt=45, tl.cex=0.8, cl.lim=c(1,max(enrich,na.rm=TRUE)))
+corrplot(enrich, is.corr=FALSE, order="alphabet", method="circle", tl.pos="lt", tl.col="blue", cl.pos="b", tl.srt=45, tl.cex=0.8, cl.lim=c(0,max(enrich,na.rm=TRUE)))
 dev.off() 
 
