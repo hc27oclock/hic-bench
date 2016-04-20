@@ -55,7 +55,8 @@ sizes_df <- rbindlist(l, use.names=TRUE, fill=TRUE)
 #Convert to long format
 sizes_long <- melt(sizes_df)
 #Get the column names
-colnames(sizes_long) <- c("sample","size")
+#colnames(sizes_long) <- c("sample","size")
+setnames(sizes_long, c("sample","size"))
 
 #Get the domain numbers
 domain_numbers <- data.frame(cbind(names,n), stringsAsFactors=FALSE)
@@ -70,6 +71,6 @@ outfile <- paste(output,sprintf("domains-stats.%s.pdf", kappa),sep="/")
 # plots on each page
 pdf(sprintf("%s", outfile))
 p1 <- ggplot(sizes_long, aes(x=factor(sample), y=size)) + geom_boxplot(aes(fill=factor(sample))) + scale_y_log10(limits = c(1e4,1e8)) + xlab("Sample") + ylab("TAD size (bp)") + theme(axis.text.y=element_text(size=7), axis.text.x = element_text(size=7, angle = 45, hjust = 1)) + ggtitle("Distribution of TAD sizes")
-p2 <- ggplot(domain_numbers, aes(x=factor(sample), y=number)) + geom_bar(stat="identity") + xlab("Sample") + ylab("TAD number") + theme(axis.text.y = element_text(size=7), axis.text.x = element_text(size=7, angle = 45, hjust = 1)) + scale_y_continuous(limit = c(0, 5000)) + ggtitle("TAD numbers") 
+p2 <- ggplot(domain_numbers, aes(x=factor(sample), y=number)) + geom_bar(stat="identity") + xlab("Sample") + ylab("TAD number") + theme(axis.text.y = element_text(size=7), axis.text.x = element_text(size=7, angle = 45, hjust = 1)) + ggtitle("TAD numbers") 
 grid.arrange(p1, p2, nrow=2, heights = c(0.55, 0.45))
 dev.off()

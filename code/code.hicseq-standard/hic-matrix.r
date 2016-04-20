@@ -14,7 +14,13 @@ cor2D <- function(x,y,method) { sapply(seq.int(dim(x)[1]),function(i) cor(as.vec
 
 # modified cor function
 mycor <- function(x,y,method) {
-  if (method=='log2pearson') return(cor(log2(x+min(x[x>0])),log2(y+min(y[y>0])),method="pearson"))
+  if (method=='log2pearson') {
+    x1 = x
+    x1[x1<=0] = min(x1[x1>0])
+    y1 = y
+    y1[y1<=0] = min(y1[y1>0])
+    return(cor(log2(x1),log2(y1),method="pearson"))
+  }
   return(cor(x,y,method=method))
 }
 
@@ -377,15 +383,6 @@ compare_matrices <- function(matrices1,matrices2,distances,method,verbose)
   # check solution matrix compatibility
   if (prod(dim(matrices2)==dim(matrices2))!=1) { write("Error: solution matrices have incompatible dimensions!", stderr()); quit(save='no') }
   
-  # log2-preprocessing
-  if (method=='pearsonlog2') {
-    matrices1[matrices1<=0] = min(matrices1[matrices1>0])
-    matrices1 = log2(matrices1)
-    matrices2[matrices2<=0] = min(matrices2[matrices2>0])
-    matrices2 = log2(matrices2)
-    method = 'pearson'
-  }
-  
   # initialize
   n_matrices = dim(matrices1)[1]
   x = matrices1[1,,]
@@ -404,7 +401,7 @@ compare_matrices <- function(matrices1,matrices2,distances,method,verbose)
       J = (I>=distances[i-1])&(I<=distances[i])
       for (k in 1:n_matrices) {
         if (verbose==TRUE) { write(paste('Comparing matrices #',k,'...',sep=''),stderr()); }
-        C[i-1,k] = cor(as.vector(matrices1[k,,][J]),as.vector(matrices2[k,,][J]),method=method)
+        C[i-1,k] = mycor(as.vector(matrices1[k,,][J]),as.vector(matrices2[k,,][J]),method=method)
       }
     }
   } else {
@@ -415,7 +412,7 @@ compare_matrices <- function(matrices1,matrices2,distances,method,verbose)
       J = distances[i-1]:distances[i]     # select columns according to distance
       for (k in 1:n_matrices) {
         if (verbose==TRUE) { write(paste('Comparing matrices #',k,'...',sep=''),stderr()); }
-        C[i-1,k] = cor(as.vector(matrices1[k,,J]),as.vector(matrices2[k,,J]),method=method)
+        C[i-1,k] = mycor(as.vector(matrices1[k,,J]),as.vector(matrices2[k,,J]),method=method)
       }
     }
   }
@@ -521,6 +518,7 @@ op_estimate <- function(cmdline_args)
     make_option(c("--row-labels"), action="store_true",default=FALSE, help="Input matrix has row labels"),
     make_option(c("-o","--output-file"), default="", help="Output RData file (required) [default=\"%default\"]."),
     make_option(c("-C","--chrom-feature-file"), default="", help="Chromosome feature file (not required) [default=\"%default\"]."),
+    make_option(c("--scale-factor"), default=1.0, help="Scale matrix values by this factor [default=%default]."),
     make_option(c("--impute"), action="store_true",default=FALSE, help="Impute matrix (only for symmetric matrices; default=replace NAs with zeros)."),
     make_option(c("--ignored-loci"), default="", help="Ignored row and column names found in this list (not required) [default=\"%default\"]."),
     make_option(c("--pseudo"), default=1, help="Pseudocount value to be added to input matrix elements [default=%default]."),
@@ -585,6 +583,9 @@ op_estimate <- function(cmdline_args)
     ignored_cols = sort(which(!is.na(match(colnames(x),as.vector(t(read.table(fignored,check.names=F)))))))
   }
 
+  # scale input matrix
+  x = x*opt$"scale-factor"
+  
   # impute symmetric matrix or replace NAs with zeros
   if ((is_full_matrix(x)==TRUE)&(opt$"impute"==TRUE)) {
     if (opt$verbose) write('Imputing matrix...',stderr())
@@ -855,6 +856,7 @@ op_normalize <- function(cmdline_args)
     make_option(c("--min-efflen"), default=100, help="Minimum effective length [default \"%default\"]."),
     make_option(c("--min-mappability"), default=0.2, help="Minimum mappability [default \"%default\"]."),
     make_option(c("--scale"), action="store_true",default=FALSE, help="Scale matrix by total number of reads and effective length."),
+    make_option(c("--scale2"), action="store_true",default=FALSE, help="Scale matrix (version 2) by total number of reads and effective length."),
     make_option(c("--impute"), action="store_true",default=FALSE, help="Impute matrix."),
     make_option(c("--impute45"), action="store_true",default=FALSE, help="Impute matrix diagonally."),
     make_option(c("--replace-na"), action="store_true",default=FALSE, help="Replace all NA values with zero."),
@@ -914,6 +916,22 @@ op_normalize <- function(cmdline_args)
     if (opt$verbose) {
       write(paste('Max value of original matrix = ',max(x,na.rm=TRUE),sep=''),stderr())
       write(paste('Max value of scaled matrix = ',max(y,na.rm=TRUE),sep=''),stderr())
+    }
+  } else if (opt$"scale2"==TRUE) {
+    if (opt$verbose) write('Scaling matrix (version 2)...',stderr())
+    efflen = as.matrix(features[i,'effective-length'])
+    efflen2 = efflen %*% t(efflen)
+    mappability = as.matrix(features[i,'mappability'])
+    mappability2 = mappability %*% t(mappability)
+    u = upper.tri(x,diag=TRUE)
+    y = x/(efflen2/mean(efflen2[u],na.rm=TRUE))/(n_reads/1e7)
+    y[(efflen2<opt$'min-efflen'^2)|(mappability2<opt$'min-mappability'^2)] = NA         # regions with low effective length and/or low mappability will be considered as missing values
+    if (opt$verbose) {
+      write(paste('Max value (original matrix) = ',max(x,na.rm=TRUE),sep=''),stderr())
+      write(paste('Max value (scaled matrix) = ',max(y,na.rm=TRUE),sep=''),stderr())
+      write(paste('Fraction of *positive* values above one (original matrix) = ',sum(x[x>1],na.rm=TRUE)/sum(x[x>0],na.rm=TRUE),sep=''),stderr())
+      write(paste('Fraction of *positive* values above one (scaled matrix) = ',sum(y[y>1],na.rm=TRUE)/sum(y[y>0],na.rm=TRUE),sep=''),stderr())
+      write(paste("KEY DATA",rownames(x)[1],sum(x[u],na.rm=TRUE),sum(y[u],na.rm=TRUE),mean(efflen2[u],na.rm=TRUE),sep='\t'),stderr())
     }
   } else {
     y = x
@@ -1813,6 +1831,13 @@ LoadEstimation = function(filename, options, replace.na)
       est$lambdas = lambdas
       est$solObj = solObj
     }
+
+    # reverse log-transformation
+    if ((options$preprocess=='none')&(est$preprocess=='log2')) {
+      if (opt$verbose) write('Reversing log-tranformation...',stderr())
+      for (k in 1:length(lambdas)) est$solObj[k,,] = 2^est$solObj[k,,] - opt$pseudo
+    }
+
     
   } else {                                            # if input is tsv, then do all necessary formatting and preprocessing
     # read matrix from text file
@@ -1868,9 +1893,9 @@ LoadEstimation = function(filename, options, replace.na)
 
 
 
-###### IdentifyDomains
+###### IdentifyDomainsOld
 
-IdentifyDomains = function(est, opt, full_matrix)
+IdentifyDomainsOld = function(est, opt, full_matrix)
 {
   n_matrices = dim(est$solObj)[1]
   n_rows = nrow(est$y)
@@ -1911,9 +1936,9 @@ IdentifyDomains = function(est, opt, full_matrix)
 
 
 
-###### IdentifyDomainsNew
+###### IdentifyDomains
 
-IdentifyDomainsNew = function(est, opt, full_matrix)
+IdentifyDomains = function(est, opt, full_matrix)
 {
   # function: compute scores 
   compute_scores = function(mat,opt,ignored_rows) 
@@ -2093,7 +2118,6 @@ op_domains <- function(cmdline_args)
     make_option(c("--skip-distance"), default=1, help="Distance from diagonal (in number of bins) to be skipped [default \"%default\"]."),
     make_option(c("--method"), default="ratio", help="Boundary score method: ratio, diffratio, intra-max, intra-min, intra-right, intra-left, inter, diff, DI, product-max, product-min [default \"%default\"]."),
     make_option(c("--tolerance"), default=0.01, help="Percent difference cutoff for merging local maxima [default \"%default\"]."),
-    make_option(c("-a","--alpha"), default=0.10, help="Minimum difference by which local maxima are greater than neighboring values [default \"%default\"]."),
     make_option(c("--fdr"), default=1.0, help="False discovery rate cutoff [default \"%default\"]."),
     make_option(c("--flank-dist"), default=10, help="Local maxima neighborhood radius (in number of bins) [default \"%default\"]."),
     make_option(c("--track-dist"), default=10, help="Maximum distance (number of bins) from diagonal for track generation  [default=%default]."),
@@ -2130,11 +2154,8 @@ op_domains <- function(cmdline_args)
   # compute boundary scores
   if (opt$verbose) { write("Computing boundary scores...",stderr()); }
   full_matrix = is_full_matrix(est$y)
-  if (opt$fdr<1) { 
-    dom = IdentifyDomainsNew(est,opt,full_matrix)
-  } else { 
-    dom = IdentifyDomains(est,opt,full_matrix)
-  }
+  dom = IdentifyDomains(est,opt,full_matrix)
+
   # setup presentation style
   n_matrices = dim(est$solObj)[1]
   n_rows = nrow(est$x)
@@ -2218,6 +2239,100 @@ op_domains <- function(cmdline_args)
   # save data
   save(opt,est,dom,file=paste(out_dir,'/domains.RData',sep=''))
   
+  # done
+  if (opt$verbose) { write("Done.",stderr()); }
+  quit(save='no');
+}
+
+
+
+
+# ########################
+#  OPERATION = BSCORES
+# ########################
+
+op_bscores <- function(cmdline_args) 
+{
+  # process command-line arguments
+  option_list <- list(
+    make_option(c("-v","--verbose"), action="store_true",default=FALSE, help="Print more messages."),
+    make_option(c("-o","--output-dir"), default="", help="Output directory (required) [default \"%default\"]."),
+    make_option(c("--min-lambda"), default=0.0, help="Minimum value for parameter lambda (only applicable if estimated max-lambda was set to Inf) [default=%default]."),
+    make_option(c("--max-lambda"), default=1.0, help="Maximum value for parameter lambda (only applicable if estimated max-lambda was set to Inf) [default=%default]."),
+    make_option(c("--n-lambda"), default=2, help="Number of lambdas (only applicable if estimated max-lambda was set to Inf) [default=%default]."),
+    make_option(c("--log2-lambda"), action="store_true",default=FALSE, help="Use log2 scale for lambda range (only applicable if estimated max-lambda was set to Inf)."),
+    make_option(c("--gamma"), default=0.0, help="Value for sparsity parameter gamma (only applicable if estimated max-lambda was set to Inf) [default=%default]."),
+    make_option(c("--row-labels"), action="store_true",default=FALSE, help="Input matrix has row labels"),
+    make_option(c("--ignored-loci"), default="", help="Ignored row and column names found in this list (not required) [default=\"%default\"]."),
+    make_option(c("--preprocess"), default="none", help="Matrix preprocessing: none (default), max, mean, log2, log2mean, rank, dist, distlog2."),
+    make_option(c("--distance"), default=5, help="Distance from diagonal (in number of bins) used for boundary score computation [default \"%default\"]."),
+    make_option(c("--distance2"), default=0, help="Distance from diagonal (in number of bins) used for boundary score computation [default \"%default\"]."),
+    make_option(c("--skip-distance"), default=1, help="Distance from diagonal (in number of bins) to be skipped [default \"%default\"]."),
+    make_option(c("--tolerance"), default=0.01, help="Percent difference cutoff for merging local maxima [default \"%default\"]."),
+    make_option(c("--fdr"), default=1.0, help="False discovery rate cutoff [default \"%default\"]."),
+    make_option(c("--flank-dist"), default=10, help="Local maxima neighborhood radius (in number of bins) [default \"%default\"]."),
+    make_option(c("--bins"), default="", help="Comma-separated bins to be highlighted [default \"%default\"].")
+  )
+  usage = 'hic-matrix.r bscores [OPTIONS] MATRIX(tsv/RData)';
+  
+  # get command line options (if help option encountered print help and exit)
+  arguments <- parse_args(args=cmdline_args, OptionParser(usage=usage,option_list=option_list), positional_arguments=c(0,Inf));
+  opt <- arguments$options;
+  if (opt$verbose) print_options(opt)
+  files <- arguments$args;
+  if (length(files)!=1) { write(paste('Usage:',usage),stderr()); quit(save='no'); }
+
+  # input arguments
+  f <- files[1]
+  out_dir <- opt$'output-dir'
+  presentation <- opt$'presentation'
+
+  # parameters  
+  bins = as.integer(strsplit(opt$'bins',',')[[1]])
+  if (length(bins)==0) { bin_points = c() } else { bin_points = (bins-min(bins))/(max(bins)-min(bins)) }
+  
+  # create output directory
+  if (out_dir=="") { write('Error: please specify output directory!',stderr()); quit(save='no'); }
+  if (file.exists(out_dir)==FALSE) { dir.create(out_dir) } else { write('Error: output directory already exists!',stderr()); quit(save='no'); }
+
+  # load data
+  if (opt$verbose) write("Loading data...",stderr())
+  est = LoadEstimation(f,opt,replace.na=TRUE)
+  if (is.null(est$lambdas)==TRUE) { write("Error: maximum lambda cannot be infinite, use the 'extract' operation to select specific lambdas.",stderr()); quit(save='no') }
+
+  # compute boundary scores
+  if (opt$verbose) { write("Computing boundary scores...",stderr()); }
+  full_matrix = is_full_matrix(est$y)
+  n_matrices = dim(est$solObj)[1]                    # number of matrices (i.e. number of lambda values)
+  bscores = {}                                       # boundary scores: all methods
+  for (k in 1:n_matrices) {                          # repeat for each matrix
+    if (opt$verbose) write(paste('-- matrix #',k,'...',sep=''),stderr())
+
+    # process matrix
+    if (full_matrix) {
+      z = est$solObj[k,,]
+      rownames(z) = rownames(est$y)
+      colnames(z) = colnames(est$y)
+    } else {
+      if (opt$verbose) write('Inverse-rotating input matrices...',stderr())
+      z = MatrixInverseRotate45(est$solObj[k,,])
+      rownames(z) = colnames(z) = rownames(est$y)
+    }
+    
+    # first, calculate all scores (all methods)
+    bscores[[k]] = MatrixBoundaryScores(z,distance=opt$distance,d2=opt$distance2,skip=opt$'skip-distance')
+    bscores[[k]][est$ignored_rows,] = NA
+  }
+
+  # create boundary score files (all scoring methods) for each lambda (using non-normalized boundary scores)
+  if (opt$verbose) { write("Saving data...",stderr()); }
+  for (k in 1:n_matrices) {
+    f = paste(out_dir,'/all_scores.k=',formatC(k,width=3,format='d',flag='0'),'.tsv',sep='')
+    score_table = cbind(rownames(bscores[[k]]),round(bscores[[k]],6))
+    colnames(score_table) = c("locus",colnames(bscores[[k]]))
+    write.table(score_table,file=f,sep='\t',row.names=F,col.names=T,quote=F)
+  }
+    
   # done
   if (opt$verbose) { write("Done.",stderr()); }
   quit(save='no');
@@ -2355,7 +2470,7 @@ op_domain_diff <- function(cmdline_args)
 	  }
 	  if (opt$verbose) { write("Computing boundary scores...",stderr()); }
 	  full_matrix = is_full_matrix(est[[f]]$y)
-	  dom[[f]] = IdentifyDomains(est[[f]],opt,full_matrix)
+	  dom[[f]] = IdentifyDomainsOld(est[[f]],opt,full_matrix)
 	}
 
   # repeat for every lambda!
@@ -2562,7 +2677,7 @@ op_compare <- function(cmdline_args)
     ignored_cols = unique(c(e1$ignored_cols,e2$ignored_cols))
 
     # determine off-diagonal distances
-    max_dist = ncol(e1$y)
+    max_dist = ncol(e1$y) - 1
     if ((tolower(e1$opt$algorithm)=='fused2dzone_flsa')||(tolower(e1$opt$algorithm)=='fused1dzone_flsa')) {
       if (e1$opt$'zone-size'!=e2$opt$'zone-size') { write('Error: the two matrices have been estimated using a different zone size!',stderr()); quit(save='no'); }
       max_dist = as.integer(e1$opt$'zone-size')
@@ -2573,21 +2688,25 @@ op_compare <- function(cmdline_args)
     # open output PDF file
     pdf(paste(fout,'.pdf',sep=''));
   
+    # compute correlations
+    if (opt$verbose) write("Computing/plotting correlations...",stderr())
+    C = {}
+    methods = c("pearson","log2pearson","spearman")
+    for (method in methods) {
+      C[[method]] = matrix(0,length(distances),n_matrices)
+      rownames(C[[method]]) = distances
+      C[[method]] = compare_matrices(e1$solObj,e2$solObj,distances=distances,method=method,verbose=TRUE)
+    }
+    
     # plot correlations
-    if (opt$verbose) { write("Computing/plotting correlations...",stderr()); }
-    par(mfrow=c(2,2));
-    c_pearson = c_spearman = matrix(0,length(distances),n_matrices)
-    rownames(c_pearson) = rownames(c_spearman) = distances
-    c_pearson = compare_matrices(e1$solObj,e2$solObj,distances=distances,method='pearson',verbose=TRUE)
-    c_spearman = compare_matrices(e1$solObj,e2$solObj,distances=distances,method='spearman',verbose=TRUE)
+    par(mfrow=c(2,2))
     xaxis_n = n_lambda;
     xaxis_values = e1$lambdas;
     xaxis_label = 'lambda';
     q = unique(as.integer(seq(1,xaxis_n,length.out=10)))
     qlab = round(xaxis_values[q],2);
     legend_pos = "bottomleft"
-    plot_matrix(c_pearson,main='Pearson correlation',xlab=xaxis_label,ylab='correlation',q=q,qlab=qlab,legend_pos=legend_pos)
-    plot_matrix(c_spearman,main='Spearman correlation',xlab=xaxis_label,ylab='correlation',q=q,qlab=qlab,legend_pos=legend_pos)
+    for (method in methods) plot_matrix(C[[method]],main=paste(method,'correlation'),xlab=xaxis_label,ylab='correlation',q=q,qlab=qlab,legend_pos=legend_pos)
 
     # boxplots of matrix values
     L1 = as.list(data.frame(apply(e1$solObj,1,as.vector)))
@@ -2620,9 +2739,9 @@ op_compare <- function(cmdline_args)
     optimal2 = 1 + order(df2_diff)[1]    # Finds maximum drop in df2
     optimal = min(optimal1,optimal2);
     write(paste('Correlations of matrices for lambda=',lambdas[1],sep=''),file=stdout())
-    write(c(c_pearson[,1],c_spearman[,1]),file=stdout())
+    write(c(C$pearson[,1],C$log2pearson[,1],C$spearman[,1]),file=stdout())
     write(paste('Correlations of matrices for optimal lambda=',lambdas[optimal],': ',sep=''),file=stdout())
-    write(c(c_pearson[,optimal],c_spearman[,optimal]),file=stdout())
+    write(c(C$pearson[,optimal],C$log2pearson[,optimal],C$spearman[,optimal]),file=stdout())
 
     # plot value of objective function
     if (length(lambdas)>1) {
@@ -2640,17 +2759,17 @@ op_compare <- function(cmdline_args)
     dev.off();
 
     # save correlation matrices  
-    if (opt$verbose) { write("Saving correlation matrices...",stderr()); }
-    Cout = cbind(lambdas,t(c_pearson))
-    colnames(Cout)[1] = 'lambda'
-    write.table(Cout,quote=F,row.names=F,sep='\t',file=paste(fout,'.cor.pearson.tsv',sep=''));
-    Cout = cbind(lambdas,t(c_spearman))
-    colnames(Cout)[1] = 'lambda'
-    write.table(Cout,quote=F,row.names=F,sep='\t',file=paste(fout,'.cor.spearman.tsv',sep=''));
+    if (opt$verbose) write("Saving correlation matrices...",stderr())
+    for (method in methods) {
+      Cout = cbind(lambdas,t(C[[method]]))
+      colnames(Cout)[1] = 'lambda'
+      write.table(Cout,quote=F,row.names=F,sep='\t',file=paste(fout,'.cor.',method,'.tsv',sep=''));
+    }
+
   
     # save
     if (opt$verbose) { write("Saving data...",stderr()); }
-    save(lambdas,gammas,c_pearson,c_spearman,df1,df2,objf1,objf2,optimal,file=paste(fout,'.RData',sep=''));
+    save(lambdas,gammas,C,df1,df2,objf1,objf2,optimal,file=paste(fout,'.RData',sep=''));
 
   } else {
     # assume matrices are in tsv format
@@ -2892,6 +3011,7 @@ if (length(args)<1) {
   cat('  heatmaps     Creates heatmaps for estimated matrices in RData file.\n');
   cat('  snapshots    Creates snapshots (triangle format) for estimated matrices in RData file(s).\n');
   cat('  transloc     Computes translocation scores.\n');
+  cat('  bscores      Computes boundary scores from input matrix (tsv) or estimated matrices (RData).\n');
   cat('  domains      Identifies domains on input matrix (tsv) or estimated matrices (RData).\n');
   cat('  domain-diff  Identifies domain boundary differences in input samples.\n');
   cat('  domain-cmp   Compares domain boundary scores.\n');
@@ -2947,6 +3067,8 @@ if (op=="preprocess") {
   op_compare(args);
 } else if (op=="compare2") {
   op_compare2(args);
+} else if (op=="bscores") {
+  op_bscores(args);
 } else if (op=="domains") {
   op_domains(args);
 } else if (op=="domain-diff") {

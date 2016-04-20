@@ -38,7 +38,7 @@ set object1 = $objects[1]
 foreach f (`cd $branch/$object1; ls -1 matrix.*.tsv matrix.*.RData | grep -vwE "$chrom_excluded"`)
   set chr = `echo $f | cut -d'.' -f2`
   scripts-send2err "Processing matrix $f..."
-  Rscript ./code/hic-matrix.r domains -v -o $outdir/$chr --row-labels $boundary_scores_params $branch/$object1/$f
+  Rscript ./code/hic-matrix.r bscores -v -o $outdir/$chr --row-labels $boundary_scores_params $branch/$object1/$f
 end
 
 # Collect boundary scores from all chromosomes

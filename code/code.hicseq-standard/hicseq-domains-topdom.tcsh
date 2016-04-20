@@ -67,7 +67,7 @@ foreach k ($kappas)
 end
 
 # cleanup
-# rm -rf $workdir
+rm -rf $workdir
 
 # -------------------------------------
 # -----  MAIN CODE ABOVE --------------

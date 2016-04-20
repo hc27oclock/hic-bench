@@ -38,6 +38,9 @@ foreach kappa ($kappas)
         Rscript ./code/plot-domains-stats.r $outdir $branch $kappa
 end
 
+# Call the script that outputs the domain stats
+Rscript ./code/plot-domains-stats2.r $outdir $branch
+
 # -------------------------------------
 # -----  MAIN CODE ABOVE --------------
 # -------------------------------------

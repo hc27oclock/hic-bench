@@ -40,6 +40,9 @@ scripts-create-path $outdir/
 
 # run estimation
 set inpdir = $branch/$object
+#set matrix_sum = `cat $inpdir/matrix.chr*.tsv | cut -f2- | grep -v ^chr | tr '\t' ' ' | tools-vectors sum -v | tools-matrix csum`
+#set scale = `echo 1000000000/$matrix_sum | bc -l`
+set scale = 1.0
 set jid = ()
 foreach mat (`cd $inpdir; ls -1 matrix.*.tsv | grep -vwE "$chrom_excluded"`)
   scripts-send2err "Processing input matrix $mat..."
@@ -50,7 +53,7 @@ foreach mat (`cd $inpdir; ls -1 matrix.*.tsv | grep -vwE "$chrom_excluded"`)
   set outmat = `echo $mat | sed 's/.tsv$/.RData/'`
   set jpref = $outdir/__jdata/job.$outmat
   scripts-create-path $jpref
-  set jid = ($jid `scripts-qsub-run $jpref 1 $mem Rscript ./code/hic-matrix.r estimate -v -o $outdir/$outmat --ignored-loci=$outdir/ignored_loci.txt $hic_params $inpdir/$mat`)
+  set jid = ($jid `scripts-qsub-run $jpref 1 $mem Rscript ./code/hic-matrix.r estimate -v -o $outdir/$outmat --ignored-loci=$outdir/ignored_loci.txt --scale-factor=$scale $hic_params $inpdir/$mat`)
 end
 scripts-qsub-wait "$jid"
 
