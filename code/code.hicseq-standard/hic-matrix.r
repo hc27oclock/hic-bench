@@ -857,6 +857,7 @@ op_normalize <- function(cmdline_args)
     make_option(c("--min-mappability"), default=0.2, help="Minimum mappability [default \"%default\"]."),
     make_option(c("--scale"), action="store_true",default=FALSE, help="Scale matrix by total number of reads and effective length."),
     make_option(c("--scale2"), action="store_true",default=FALSE, help="Scale matrix (version 2) by total number of reads and effective length."),
+    make_option(c("--scale3"), action="store_true",default=FALSE, help="Scale matrix (version 3) by total number of reads and effective length."),
     make_option(c("--impute"), action="store_true",default=FALSE, help="Impute matrix."),
     make_option(c("--impute45"), action="store_true",default=FALSE, help="Impute matrix diagonally."),
     make_option(c("--replace-na"), action="store_true",default=FALSE, help="Replace all NA values with zero."),
@@ -925,6 +926,23 @@ op_normalize <- function(cmdline_args)
     mappability2 = mappability %*% t(mappability)
     u = upper.tri(x,diag=TRUE)
     y = x/(efflen2/mean(efflen2[u],na.rm=TRUE))/(n_reads/1e7)
+    y[(efflen2<opt$'min-efflen'^2)|(mappability2<opt$'min-mappability'^2)] = NA         # regions with low effective length and/or low mappability will be considered as missing values
+    if (opt$verbose) {
+      write(paste('Max value (original matrix) = ',max(x,na.rm=TRUE),sep=''),stderr())
+      write(paste('Max value (scaled matrix) = ',max(y,na.rm=TRUE),sep=''),stderr())
+      write(paste('Fraction of *positive* values above one (original matrix) = ',sum(x[x>1],na.rm=TRUE)/sum(x[x>0],na.rm=TRUE),sep=''),stderr())
+      write(paste('Fraction of *positive* values above one (scaled matrix) = ',sum(y[y>1],na.rm=TRUE)/sum(y[y>0],na.rm=TRUE),sep=''),stderr())
+      write(paste("KEY DATA",rownames(x)[1],sum(x[u],na.rm=TRUE),sum(y[u],na.rm=TRUE),mean(efflen2[u],na.rm=TRUE),sep='\t'),stderr())
+    }
+  } else if (opt$"scale3"==TRUE) {
+    if (opt$verbose) write('Scaling matrix (version 3)...',stderr())
+    efflen = as.matrix(features[i,'effective-length'])
+    efflen2 = efflen %*% t(efflen)
+    mappability = as.matrix(features[i,'mappability'])
+    mappability2 = mappability %*% t(mappability)
+    u = upper.tri(x,diag=TRUE)
+    n_reads = sum(x[u],na.rm=TRUE)
+    y = x/(n_reads*efflen2/sum(efflen2[u],na.rm=TRUE))
     y[(efflen2<opt$'min-efflen'^2)|(mappability2<opt$'min-mappability'^2)] = NA         # regions with low effective length and/or low mappability will be considered as missing values
     if (opt$verbose) {
       write(paste('Max value (original matrix) = ',max(x,na.rm=TRUE),sep=''),stderr())
@@ -1602,8 +1620,7 @@ op_matrices <- function(cmdline_args)
     n_matrices = length(lambdas)
     for (k in 1:n_matrices) {
       z = GetSolution(e$solObj,n_rows=nrow(e$y),invrotate=invrotate,lambda=lambdas[k],gamma=opt$gamma)
-      rownames(z) = rownames(e$y)
-      colnames(z) = colnames(e$y)
+      rownames(z) = colnames(z) = rownames(e$y)
       fout = paste(out_dir,'/matrix.k=',formatC(k,width=3,format='d',flag='0'),'.tsv',sep='')
       write.table(format(z,scientific=TRUE,digits=4),row.names=TRUE,col.names=is_full_matrix(z),quote=FALSE,sep='\t',file=fout)
     }
@@ -1615,8 +1632,7 @@ op_matrices <- function(cmdline_args)
     for (k in 1:n_matrices) {
       z = e$solObj[k,,]
       if (invrotate==TRUE) z = MatrixInverseRotate45(z)
-      rownames(z) = rownames(e$y)
-      colnames(z) = colnames(e$y)
+      rownames(z) = colnames(z) = rownames(e$y)
       fout = paste(out_dir,'/matrix.k=',formatC(k,width=3,format='d',flag='0'),'.tsv',sep='')
       write.table(format(z,scientific=TRUE,digits=4),row.names=TRUE,col.names=is_full_matrix(z),quote=FALSE,sep='\t',file=fout)
     }

@@ -31,6 +31,7 @@ source $params
 # create path
 scripts-create-path $outdir/
 
+
 # -------------------------------------
 # -----  MAIN CODE BELOW --------------
 # -------------------------------------
@@ -41,6 +42,7 @@ mkdir -p $workdir
 
 set chrom_list = `echo $regions | tr ' ' '\n' | cut -d':' -f1 | sort -u | tr '\n' '|' | sed 's/|$//'`
 set est_matrices = `cd $inpdir; ls -1 matrix.*.tsv matrix.*.RData | grep -wE "$chrom_list"`            # TODO: inpdir should not have both tsv and RData, check!
+
 foreach est_mat ($est_matrices)
   scripts-send2err "Processing matrix $est_mat..."
   set chr = `echo $est_mat | cut -d'.' -f2`
@@ -52,8 +54,9 @@ foreach est_mat ($est_matrices)
     mkdir -p $workdir/tmp
     cat $inpdir/$est_mat >! $workdir/tmp/matrix.k=001.tsv
   endif
-  
+
   # convert matrices and run hicplotter
+  scripts-send2err "Converting matrices into hicplotter format..."
   foreach mat ($workdir/tmp/matrix.*.tsv)
     set pref = `basename $mat .tsv | sed 's/^matrix\.//'`.$chr
     set inpmat = $pref.matrix.txt
@@ -62,8 +65,8 @@ foreach est_mat ($est_matrices)
   rm -rf $workdir/tmp
 end
 
-# Run hicplotter
-# Go through the regions
+next:
+# Run hicplotter, each region separately
 set loop_bed = ""
 foreach region ($regions)
   scripts-send2err "region = $region"
@@ -74,12 +77,6 @@ foreach region ($regions)
   set stop_bin = `echo $stop/$bin_size | bc`
   set hic_matrices = `cd $workdir; ls -1 *.matrix.txt | grep -w $chrom | tr '\n' ' '`
   set hic_matrix_no = `echo $hic_matrices | tr ' ' '\n' | wc -l`
-  set bedgraphs2 = ()
-  foreach b ($bedgraphs)
-    set bedgraphs2 = ($bedgraphs2 `readlink -f $b`)
-  end
-  set bedgraphs_csv = `echo $bedgraphs2 | sed 's/ /,/g'`
-  set bedgraph_labels_csv = `echo $bedgraph_labels | sed 's/ /,/g'`
   set tiles2 = ()
   foreach t ($tiles)
     set tiles2 = ($tiles2 `readlink -f $t`)
@@ -92,10 +89,6 @@ foreach region ($regions)
   #Get the loop beds
   set loop_beds = ()
   #Get all bedgraphs
-  set all_bedgraphs = ()
-  #Get all bedgraph labels
-  set all_bedgraph_labels = ()
-  #Get all bedgraphs
   set all_tiles = ()
   #Get all bedgraph labels
   set all_tiles_labels = ()
@@ -103,8 +96,6 @@ foreach region ($regions)
   foreach i ( `seq 1 1 $hic_matrix_no` )
     set region_labels = ( $region_labels $region )
     set loop_beds = ( $loop_beds $loop_bed )
-    set all_bedgraphs = ( $all_bedgraphs $bedgraphs_csv )
-    set all_bedgraph_labels = ( $all_bedgraph_labels $bedgraph_labels_csv )
     set all_tiles = ( $all_tiles $tiles_csv )
     set all_tiles_labels = ( $all_tiles_labels $tiles_labels_csv )
   end
@@ -118,7 +109,7 @@ foreach region ($regions)
   endif
   set hicplotter_abs_path = `readlink -f $hicplotter_path`
   cd $workdir
-  python $hicplotter_abs_path -v -f $hic_matrices -n $region_labels -chr $chrom -s $start_bin -e $stop_bin -r $bin_size -o $region -t $all_tiles -tl $all_tiles_labels -hist $all_bedgraphs -hl $all_bedgraph_labels -fh $fileheader -pi $insulation_score $highlight_opt
+  python $hicplotter_abs_path -v -f $hic_matrices -n $region_labels -chr $chrom -s $start_bin -e $stop_bin -r $bin_size -o $region -t $all_tiles -tl $all_tiles_labels -hist $bedgraphs -hl $bedgraph_labels -fh $fileheader -pi $insulation_score $highlight_opt
   cd $p
 end
 
@@ -135,6 +126,7 @@ set pdfs = `echo $regions | sed 's/$/ /' | sed 's/ /.pdf /g'`
 cd $p
 
 # Cleanup
+rm -f $outdir/bscores.*
 rm -rf $workdir
 	
 # -------------------------------------
