@@ -520,6 +520,7 @@ op_estimate <- function(cmdline_args)
     make_option(c("-C","--chrom-feature-file"), default="", help="Chromosome feature file (not required) [default=\"%default\"]."),
     make_option(c("--scale-factor"), default=1.0, help="Scale matrix values by this factor [default=%default]."),
     make_option(c("--impute"), action="store_true",default=FALSE, help="Impute matrix (only for symmetric matrices; default=replace NAs with zeros)."),
+    make_option(c("--random-count"), action="store_true",default=FALSE, help="Adds a small random counts to all matrix elements."),
     make_option(c("--ignored-loci"), default="", help="Ignored row and column names found in this list (not required) [default=\"%default\"]."),
     make_option(c("--pseudo"), default=1, help="Pseudocount value to be added to input matrix elements [default=%default]."),
     make_option(c("--min-score"), default=1, help="Minimum HiC score in input matrix [default=%default]."),
@@ -593,6 +594,13 @@ op_estimate <- function(cmdline_args)
     if (opt$verbose) write(paste('Imputed matrix symmetricity = ',sum(x==t(x))/length(x),sep=''),stderr())
   } else {
     x[is.na(x)] = 0
+  }
+  
+  # add small random counts to all matrix elements
+  if (opt$"random-count"==TRUE) {
+    if (opt$verbose) write('Adding small random counts to all matrix elements...',stderr())
+    set.seed(001)
+    x = x + runif(length(x),min=0,max=0.1)
   }
   
   # restrict input matrices to specified distance from diagonal (only applicable to distance-restricted matrices; full matrices are not modified)
@@ -799,10 +807,11 @@ op_preprocess <- function(cmdline_args)
   # process command-line arguments
   option_list <- list(
     make_option(c("-v","--verbose"), action="store_true",default=FALSE, help="Print more messages."),
+    make_option(c("-o","--output-file"), default="", help="Output matrix tsv file [default \"%default\"]."),
     make_option(c("--pseudo"), default=1, help="Pseudocount value to be added to input matrix elements [default=%default]."),
     make_option(c("--row-labels"), action="store_true",default=FALSE, help="Input matrix has row labels"),
     make_option(c("--min-score"), default=1, help="Minimum HiC score in input matrix [default=%default]."),
-    make_option(c("--preprocess"), default="none", help="Matrix preprocessing: none (default), max, mean, log2, log2mean, rank, dist, distlog2.")
+    make_option(c("--preprocess"), default="none", help="Matrix preprocessing: none (default), max, mean, log2, log2mean, rank, dist, distlog2, zscore.")
   )
   usage = 'hic-matrix.r preprocess [OPTIONS] MATRIX';
   
@@ -828,7 +837,7 @@ op_preprocess <- function(cmdline_args)
 
   # print new matrix
   if (opt$verbose) { write("Printing new matrix...",stderr()); }
-  write.table(format(y,scientific=TRUE,digits=4),quote=F,sep='\t')
+  write.table(format(y,scientific=TRUE,digits=4),quote=F,sep='\t',file=opt$"output-file")
 
   # done
   if (opt$verbose) { write("Done.",stderr()); }
