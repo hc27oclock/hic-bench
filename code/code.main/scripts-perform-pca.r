@@ -103,14 +103,14 @@ library("gplots")
 
 # PCA on raw input matrix
 if (opt$'verbose'==TRUE) write('Performing PCA on input matrix...',stderr())
-pdf(paste(out_dir,'/report.raw.pdf',sep=''))
+pdf(paste(out_dir,'/report.raw.pdf',sep=''),useDingbats=FALSE)
 x_pca = plotPCA(x,show_text=show_text,use_short_names=opt$"use-short-names",plain=opt$"plain")
 dev.off()
 
 # PCA on mean-normalized matrix
 if (opt$'verbose'==TRUE) write('Performing PCA on mean-normalized matrix...',stderr())
 z = t(t(x)/apply(x,2,mean))
-pdf(paste(out_dir,'/report.mnorm.pdf',sep=''))
+pdf(paste(out_dir,'/report.mnorm.pdf',sep=''),useDingbats=FALSE)
 z_pca = plotPCA(z,show_text=show_text,use_short_names=opt$"use-short-names",plain=opt$"plain")
 dev.off()
 
@@ -120,7 +120,7 @@ suppressMessages(library("preprocessCore"))
 y = normalize.quantiles(x)
 rownames(y) = rownames(x)
 colnames(y) = colnames(x)
-pdf(paste(out_dir,'/report.qnorm.pdf',sep=''))
+pdf(paste(out_dir,'/report.qnorm.pdf',sep=''),useDingbats=FALSE)
 y_pca = plotPCA(y,show_text=show_text,use_short_names=opt$"use-short-names",plain=opt$"plain")
 dev.off()
 

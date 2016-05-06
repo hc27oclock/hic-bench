@@ -49,7 +49,7 @@ foreach mat (`cd $inpdir; ls -1 matrix.*.tsv | grep -vwE "$chrom_excluded"`)
   # distance-normalize
   set jpref = $outdir/__jdata/job.`echo $mat | sed 's/\.[^.]\+$//'`
   scripts-create-path $jpref
-  set jid = ($jid `scripts-qsub-run $jpref 1 $mem Rscript ./code/hic-matrix.r preprocess -v -o $outdir/$mat --preprocess=dist $inpdir/$mat`)
+  set jid = ($jid `scripts-qsub-run $jpref 1 $mem Rscript ./code/hic-matrix.r preprocess -v -o $outdir/$mat --row-labels --preprocess=$preprocess $distnorm_params $inpdir/$mat`)
 end
 
 # wait until all jobs are completed

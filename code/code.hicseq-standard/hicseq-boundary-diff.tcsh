@@ -2,7 +2,7 @@
 source ./code/code.main/custom-tcshrc     # shell settings
 
 ##
-## USAGE: hicseq-diff-domains.tcsh OUTDIR PARAMS BRANCH OBJECT1 OBJECT2
+## USAGE: hicseq-boundary-diff.tcsh OUTDIR PARAMS BRANCH OBJECT1 OBJECT2
 ##
 
 if ($#argv != 5) then
@@ -34,7 +34,7 @@ foreach f (`cd $branch/$object1; ls -1 matrix.*.tsv matrix.*.RData | grep -vwE "
   set chr = `echo $f | cut -d'.' -f2`
   scripts-send2err "Processing matrix $f..."
   if ((-e $branch/$object1/$f) && (-e $branch/$object2/$f)) then
-    Rscript ./code/hic-matrix.r domain-diff -v -o $outdir/$chr --row-labels $diff_domains_params $branch/$object1/$f $branch/$object2/$f             # TODO: use scripts-qsub-run to assign memory
+    Rscript ./code/hic-matrix.r bdiff -v -o $outdir/$chr --row-labels $diff_domains_params $branch/$object1/$f $branch/$object2/$f             # TODO: use scripts-qsub-run to assign memory
   endif
 end
 

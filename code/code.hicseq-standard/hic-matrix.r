@@ -378,7 +378,7 @@ calc_counts_per_distance <- function(mat)
 #  compare_matrices   #
 # #####################
 
-compare_matrices <- function(matrices1,matrices2,distances,method,verbose)
+compare_matrices <- function(matrices1,matrices2,distances,method,prep='none',verbose=FALSE)
 {
   # check solution matrix compatibility
   if (prod(dim(matrices2)==dim(matrices2))!=1) { write("Error: solution matrices have incompatible dimensions!", stderr()); quit(save='no') }
@@ -392,9 +392,20 @@ compare_matrices <- function(matrices1,matrices2,distances,method,verbose)
   C = matrix(0,nrow=length(distances),ncol=n_matrices)
   rownames(C) = distances
 
+  # distances
+  distances[distances>n_cols] = n_cols
+  distances = unique(sort(c(0,distances)))
+  
+  # preprocess matrices
+  if (prep!='none') {
+    for (k in 1:n_matrices) {
+      matrices1[k,,] = PreprocessMatrix(matrices1[k,,],preprocess=prep,pseudo=0,cutoff=0,max_dist=max(distances))
+      matrices2[k,,] = PreprocessMatrix(matrices2[k,,],preprocess=prep,pseudo=0,cutoff=0,max_dist=max(distances))  
+    }  
+  }  
+  
   # compare  
   if (full_matrix==TRUE) {
-    distances = unique(sort(c(0,distances)))
     I = col(matrices1[1,,])-row(matrices1[1,,])
     for (i in 2:length(distances)) {
       if (verbose==TRUE) { write(paste('Distance = ',distances[i],':',sep=''),stderr()); }
@@ -405,8 +416,6 @@ compare_matrices <- function(matrices1,matrices2,distances,method,verbose)
       }
     }
   } else {
-    distances[distances>n_cols] = n_cols
-    distances = unique(sort(c(0,distances)))
     for (i in 2:length(distances)) {
       if (verbose==TRUE) { write(paste('Distance = ',distances[i],':',sep=''),stderr()); }
       J = distances[i-1]:distances[i]     # select columns according to distance
@@ -446,7 +455,7 @@ plot_matrix <- function(mat,main,xlab,ylab,q,qlab,legend_pos,ylim=c(0,1))
 #
 # PreprocessMatrix
 #
-PreprocessMatrix <- function(x,preprocess,pseudo=1,cutoff=0)       # TODO: add option for dist-norm: custom stats vectors
+PreprocessMatrix <- function(x,preprocess,pseudo=1,cutoff=0,max_dist=NA) 
 {
   if (preprocess=="none") {
     y = x
@@ -463,7 +472,6 @@ PreprocessMatrix <- function(x,preprocess,pseudo=1,cutoff=0)       # TODO: add o
     n = nrow(x)
     y = matrix(rank(x),n)/n^2
   } else if (preprocess=="dist") {
-    # TODO: allow custom stats file as input!
     full_matrix = is_full_matrix(x)
     if (full_matrix) {
       counts = calc_counts_per_distance(x)
@@ -475,27 +483,22 @@ PreprocessMatrix <- function(x,preprocess,pseudo=1,cutoff=0)       # TODO: add o
       y = t(apply(x,1,'/',expected))
     }
     y[is.na(y)] = 0
-    y[x<cutoff] = 0
+    y[y<cutoff] = 0
   } else if (preprocess=="distlog2") {
     y = PreprocessMatrix(x,"dist",pseudo=pseudo,cutoff=cutoff)
     y[y<1] = 1
     y = log2(y)
   } else if (preprocess=="zscore") {
-    # TODO: allow custom stats file as input!
     full_matrix = is_full_matrix(x)
-    if (full_matrix) {
-      write('Error: not implemented for full matrices yet!',stderr())
-      quit(save='no')
-    } else {
-      mat = log2(x+pseudo)
-      i = 1; j = 3; while (j<=ncol(x)) { mat[i,j:ncol(mat)] = NA; i = i + 1; j = j + 2 }
-      i = nrow(mat); j = 2; while (j<=ncol(mat)) { mat[i,j:ncol(mat)] = NA; i = i - 1; j = j + 2 }
-      mat_mean = apply(mat,2,mean,na.rm=TRUE)
-      mat_sd = apply(mat,2,sd,na.rm=TRUE)
-      y = t(apply(t(mat)-mat_mean,2,'/',mat_sd))
-    }
+    if (full_matrix) { y = MatrixRotate45(x,max_dist) } else { y = x }                         # rotate matrix, if input is full matrix
+    i = 1; j = 3; while (j<=ncol(y)) { y[i,j:ncol(y)] = NA; i = i + 1; j = j + 2 }
+    i = nrow(y); j = 2; while (j<=ncol(y)) { y[i,j:ncol(y)] = NA; i = i - 1; j = j + 2 }
+    y_mean = apply(y,2,mean,na.rm=TRUE)                                                        # compute mean and stdev
+    y_sd = apply(y,2,sd,na.rm=TRUE)
+    y = t(apply(t(y)-y_mean,2,'/',y_sd))                                                       # compute z-scores
     y[is.na(y)] = 0
-    y[x<cutoff] = 0
+    y[y<cutoff] = 0
+    if (full_matrix) y = MatrixInverseRotate45(y)                                              # inverse rotate, if input is full matrix
   } else {
     write(paste('Error: unknown preprocessing method "',preprocess,'"!',sep=''),stderr());
     quit(save='no');
@@ -811,6 +814,7 @@ op_preprocess <- function(cmdline_args)
     make_option(c("--pseudo"), default=1, help="Pseudocount value to be added to input matrix elements [default=%default]."),
     make_option(c("--row-labels"), action="store_true",default=FALSE, help="Input matrix has row labels"),
     make_option(c("--min-score"), default=1, help="Minimum HiC score in input matrix [default=%default]."),
+    make_option(c("--max-dist"), default=1, help="Maximum distance (applicable only for zscore normalization) [default=%default]."),
     make_option(c("--preprocess"), default="none", help="Matrix preprocessing: none (default), max, mean, log2, log2mean, rank, dist, distlog2, zscore.")
   )
   usage = 'hic-matrix.r preprocess [OPTIONS] MATRIX';
@@ -823,17 +827,13 @@ op_preprocess <- function(cmdline_args)
   
   # input arguments
   fmatrix = files[1]
-  row_labels = opt$"row-labels"
-  pseudo = opt$pseudo
-  min_hicscore = opt$'min-score'
-  preprocess = opt$preprocess
   
   # read files
   if (opt$verbose) { write('Loading matrix...',stderr()); }
-  if (row_labels==FALSE) { x = as.matrix(read.table(fmatrix,check.names=F)) } else { x = as.matrix(read.table(fmatrix,row.names=1,check.names=F)) }
+  if (opt$"row-labels"==FALSE) { x = as.matrix(read.table(fmatrix,check.names=F)) } else { x = as.matrix(read.table(fmatrix,row.names=1,check.names=F)) }
 
   # preprocess input matrix
-  y = PreprocessMatrix(x,preprocess=preprocess,pseudo=pseudo,cutoff=min_hicscore)
+  y = PreprocessMatrix(x,preprocess=opt$preprocess,pseudo=opt$pseudo,cutoff=opt$'min-score',max_dist=opt$'max-dist')
 
   # print new matrix
   if (opt$verbose) { write("Printing new matrix...",stderr()); }
@@ -1890,7 +1890,7 @@ LoadEstimation = function(filename, options, replace.na)
     }
 
     # preprocess input matrix
-    est$y = PreprocessMatrix(est$x,preprocess=options$preprocess,pseudo=1,cutoff=1)
+    est$y = PreprocessMatrix(est$x,preprocess=options$preprocess,pseudo=1)
     est$solObj = array(0,dim=c(1,dim(est$x)[1],dim(est$x)[2]))
     est$solObj[1,,] = est$y
     est$preprocess = options$preprocess
@@ -2437,10 +2437,10 @@ local_maxima = function(x,tolerance,alpha,maxd)
 
 
 # ##########################
-#  OPERATION = DOMAIN-DIFF
+#  OPERATION = BDIFF
 # ##########################
 
-op_domain_diff <- function(cmdline_args) 
+op_bdiff <- function(cmdline_args) 
 {
   # process command-line arguments
   option_list <- list(
@@ -2459,13 +2459,13 @@ op_domain_diff <- function(cmdline_args)
     make_option(c("--skip-distance"), default=1, help="Distance from diagonal (in number of bins) to be skipped [default \"%default\"]."),
     make_option(c("--method"), default="ratio", help="Boundary score method: ratio, diffratio, intra-max, intra-min, intra-right, intra-left, inter, diff, DI [default \"%default\"]."),
     make_option(c("--tolerance"), default=0.01, help="Percent difference cutoff for merging local maxima [default \"%default\"]."),
-    make_option(c("--alpha"), default=0.25, help="Minimum difference by which local maxima are greater than neighboring values [default \"%default\"]."),
+    make_option(c("--fdr"), default=1.0, help="False discovery rate cutoff [default \"%default\"]."),
     make_option(c("--delta"), default=0.25, help="Minimum difference for calling differential boundaries [default \"%default\"]."),
     make_option(c("--flank-dist"), default=10, help="Local maxima neighborhood radius (in number of bins) [default \"%default\"]."),
     make_option(c("--track-dist"), default=10, help="Maximum distance (number of bins) from diagonal for track generation  [default=%default]."),
     make_option(c("--bins"), default="", help="Comma-separated bins to be highlighted [default \"%default\"].")
   )
-  usage = 'hic-matrix.r domain-diff [OPTIONS] MATRIX-FILES(tsv/RData)'
+  usage = 'hic-matrix.r bdiff [OPTIONS] MATRIX-FILES(tsv/RData)'
   
   # get command line options (if help option encountered print help and exit)
   arguments <- parse_args(args=cmdline_args, OptionParser(usage=usage,option_list=option_list), positional_arguments=c(0,Inf));
@@ -2483,19 +2483,16 @@ op_domain_diff <- function(cmdline_args)
   if (out_dir=="") { write('Error: please specify output directory!',stderr()); quit(save='no') }
   if (file.exists(out_dir)==FALSE) { dir.create(out_dir) } else { write('Error: output directory already exists!',stderr()); quit(save='no') }
 
-	# loading matrix data
+	# loading matrix data & identify domains
 	est = {}
 	dom = {}
 	for (f in 1:length(files)) { 
     if (opt$verbose) write(paste('Loading input matrix ',files[f],'...',sep=''),stderr())
 	  est[[f]] = LoadEstimation(files[[f]],opt,replace.na=TRUE)
-	  if (is.null(est[[f]]$lambdas)==TRUE) { 
-	    write("Error: maximum lambda cannot be infinite, use the 'extract' operation to select specific lambdas.",stderr())
-	    quit(save='no') 
-	  }
-	  if (opt$verbose) { write("Computing boundary scores...",stderr()); }
+	  if (is.null(est[[f]]$lambdas)==TRUE) { write("Error: maximum lambda cannot be infinite, use the 'extract' operation to select specific lambdas.",stderr()); quit(save='no') }
+	  if (opt$verbose) write("Computing boundary scores...",stderr())
 	  full_matrix = is_full_matrix(est[[f]]$y)
-	  dom[[f]] = IdentifyDomainsOld(est[[f]],opt,full_matrix)
+	  dom[[f]] = IdentifyDomains(est[[f]],opt,full_matrix)
 	}
 
   # repeat for every lambda!
@@ -2533,7 +2530,6 @@ op_domain_diff <- function(cmdline_args)
 		for (f in 1:length(files)) { table = cbind(table,round(scores[[f]],4)); colnames(table)[ncol(table)] = paste('lmax-score-sample-',f,sep='') }
 		for (f in 1:length(files)) { table = cbind(table,round(scores0[[f]],4)); colnames(table)[ncol(table)] = paste('lmax-score0-sample-',f,sep='') }
 		write.table(table,col.names=T,row.names=F,quote=F,sep='\t',file=paste(out_dir,'/table.k=',formatC(ll,width=3,format='d',flag='0'),'.tsv',sep=''))
-		#save(opt,dom,scores,lmax,d,d2,file=paste(out_dir,'/diff.k=',formatC(ll,width=3,format='d',flag='0'),'.RData',sep=''))   # TODO: make this an option?
 		
 		# generate snapshots
 		if (length(data)!=0) {
@@ -2560,7 +2556,8 @@ op_domain_diff <- function(cmdline_args)
 		      s0 = as.vector(scores0[[f]][I])
 		      s = as.vector(scores[[f]][I])
 		      lines(seq(0,1,length.out=length(s0)),(s0-s0min)/(s0max-s0min),col='green4')
-		      lines(seq(0,1,length.out=length(s)),s,col='blue')
+#		      lines(seq(0,1,length.out=length(s)),s,col='blue')   # TODO: restore this?
+		      lines(seq(0,1,length.out=length(s)),(s-min(s))/(max(s)-min(s)),col='blue')
 		      enorm = which(lmax[[f]][I]==1)/length(I)
 		      abline(v=(which(lmax[[f]][I]==1)-1)/(length(I)-1),col='blue')
 		      d = 1/length(I)
@@ -2683,7 +2680,11 @@ op_compare <- function(cmdline_args)
 
   # Error checking on input arguments
   if (fout=="") { write('Error: please specify output file!',stderr()); quit(save='no'); }
+
+  # Initialize correlation results
+  C = {}
   
+  # Process RData/tsv input separately
   ext = sub("^.*[.]","",f1)
   if (ext=="RData") {
     # compute and plot correlations
@@ -2715,12 +2716,14 @@ op_compare <- function(cmdline_args)
   
     # compute correlations
     if (opt$verbose) write("Computing/plotting correlations...",stderr())
-    C = {}
     methods = c("pearson","log2pearson","spearman")
-    for (method in methods) {
-      C[[method]] = matrix(0,length(distances),n_matrices)
-      rownames(C[[method]]) = distances
-      C[[method]] = compare_matrices(e1$solObj,e2$solObj,distances=distances,method=method,verbose=TRUE)
+    for (prep in c("none","zscore")) {
+      for (method in methods) {
+        id = paste(method,".prep_",prep,sep='')
+        C[[id]] = matrix(0,length(distances),n_matrices)
+        rownames(C[[id]]) = distances
+        C[[id]] = compare_matrices(e1$solObj,e2$solObj,distances=distances,method=method,prep=prep,verbose=TRUE)
+      }
     }
     
     # plot correlations
@@ -2731,7 +2734,7 @@ op_compare <- function(cmdline_args)
     q = unique(as.integer(seq(1,xaxis_n,length.out=10)))
     qlab = round(xaxis_values[q],2);
     legend_pos = "bottomleft"
-    for (method in methods) plot_matrix(C[[method]],main=paste(method,'correlation'),xlab=xaxis_label,ylab='correlation',q=q,qlab=qlab,legend_pos=legend_pos)
+    for (id in names(C)) plot_matrix(C[[id]],main=id,xlab=xaxis_label,ylab='correlation',q=q,qlab=qlab,legend_pos=legend_pos)
 
     # boxplots of matrix values
     L1 = as.list(data.frame(apply(e1$solObj,1,as.vector)))
@@ -2763,10 +2766,7 @@ op_compare <- function(cmdline_args)
     optimal1 = 1 + order(df1_diff)[1]    # Finds maximum drop in df1
     optimal2 = 1 + order(df2_diff)[1]    # Finds maximum drop in df2
     optimal = min(optimal1,optimal2);
-    write(paste('Correlations of matrices for lambda=',lambdas[1],sep=''),file=stdout())
-    write(c(C$pearson[,1],C$log2pearson[,1],C$spearman[,1]),file=stdout())
-    write(paste('Correlations of matrices for optimal lambda=',lambdas[optimal],': ',sep=''),file=stdout())
-    write(c(C$pearson[,optimal],C$log2pearson[,optimal],C$spearman[,optimal]),file=stdout())
+    write(paste('Optimal lambda = ',lambdas[optimal],sep=''),file=stdout())
 
     # plot value of objective function
     if (length(lambdas)>1) {
@@ -2783,21 +2783,13 @@ op_compare <- function(cmdline_args)
     }  
     dev.off();
 
-    # save correlation matrices  
-    if (opt$verbose) write("Saving correlation matrices...",stderr())
-    for (method in methods) {
-      Cout = cbind(lambdas,t(C[[method]]))
-      colnames(Cout)[1] = 'lambda'
-      write.table(Cout,quote=F,row.names=F,sep='\t',file=paste(fout,'.cor.',method,'.tsv',sep=''));
-    }
-
-  
     # save
     if (opt$verbose) { write("Saving data...",stderr()); }
     save(lambdas,gammas,C,df1,df2,objf1,objf2,optimal,file=paste(fout,'.RData',sep=''));
 
   } else {
     # assume matrices are in tsv format
+    if (opt$verbose) { write("Loading data...",stderr()); }
     mat1 = as.matrix(read.table(files[1],row.names=1,check.names=F))
     mat2 = as.matrix(read.table(files[2],row.names=1,check.names=F))
     if ((nrow(mat1)!=nrow(mat2))||(ncol(mat1)!=ncol(mat2))) { write('Error: different matrix sizes in samples!',stderr()); quit(save='no'); }
@@ -2806,124 +2798,44 @@ op_compare <- function(cmdline_args)
     mat1[is.na(mat1)] = 0
     mat2[is.na(mat2)] = 0
 
-    # distance from diagonal
-    full_matrix = is_full_matrix(mat1)
+    # determine distances from diagonal
     max_dist = ncol(mat1) - 1
     if ((opt$"max-dist">0)&&(opt$"n-dist">0)) max_dist = min(max_dist,opt$"max-dist")          # limit max-dist according to input params
-    D = abs(row(mat1)-col(mat1))
+    distances = rev(as.integer(1:opt$"n-dist"*(max_dist/opt$"n-dist")))
+
+    # convert matrices to array of matrices (for compatibility with compare_matrices below)
+    mat1 = array(mat1,dim=c(1,dim(mat1)))
+    mat2 = array(mat2,dim=c(1,dim(mat2)))
 
     # compute correlations
-    methods = c("pearson","spearman","log2pearson")
-    distances = rev(as.integer(1:opt$"n-dist"*(max_dist/opt$"n-dist")))
-    for (m in methods) {
-      C = matrix(0,1,length(distances))
-      colnames(C) = c(paste("d=",distances,sep=''))
-      for (k in 1:length(distances)) {
-        d = distances[k]
-        C[k] = ifelse(full_matrix==TRUE,mycor(as.vector(mat1[D<=d]),as.vector(mat2[D<=d]),method=m),mycor(as.vector(mat1[,1:(d+1)]),as.vector(mat2[,1:(d+1)]),method=m))
+    if (opt$verbose) write("Computing correlations...",stderr())
+    n_matrices = 1
+    lambdas = c(0.00)
+    methods = c("pearson","log2pearson","spearman")
+    for (prep in c("none","zscore")) {
+      for (method in methods) {
+        id = paste(method,".prep_",prep,sep='')
+        C[[id]] = matrix(0,length(distances),n_matrices)
+        rownames(C[[id]]) = distances
+        C[[id]] = compare_matrices(mat1,mat2,distances=distances,method=method,prep=prep,verbose=TRUE)
       }
-      C_table = cbind("0",round(C,4))
-      colnames(C_table) = c("lambda",colnames(C))
-      write.table(C_table,quote=FALSE,row.names=FALSE,sep='\t',file=paste(fout,'.cor.',m,'.tsv',sep=''))
     }
   }
   
+  # save correlation matrices  
+  if (opt$verbose) write("Saving correlation matrices...",stderr())
+  for (id in names(C)) {
+    Cout = cbind(lambdas,t(C[[id]]))
+    colnames(Cout)[1] = 'lambda'
+    write.table(Cout,quote=F,row.names=F,sep='\t',file=paste(fout,'.cor.',id,'.tsv',sep=''));
+  }
+
   # done
   if (opt$verbose) { write("Done.",stderr()); }
   quit(save='no');
 }
 
 
-
-
-# ########################
-#  OPERATION = COMPARE2
-# ########################
-
-op_compare2 <- function(cmdline_args) 
-{
-  # process command-line arguments
-  option_list <- list(
-    make_option(c("-v","--verbose"), action="store_true",default=FALSE, help="Print more messages."),
-    make_option(c("-o","--output-file"), default="", help="Output pdf file (required) [default \"%default\"]."),
-    make_option(c("-b","--bin-size"), default=0, help="Bin size in nucleotides [default \"%default\"].")
-  );
-  usage = 'hic-matrix.r compare2 [OPTIONS] MATRIX1 MATRIX2';
-  
-  # get command line options (if help option encountered print help and exit)
-  arguments <- parse_args(args=cmdline_args, OptionParser(usage=usage,option_list=option_list), positional_arguments=c(0,Inf));
-  opt <- arguments$options;
-  files <- arguments$args;
-  if (length(files)!=2) { write(paste('Usage:',usage),stderr()); quit(save='no'); }
-
-  # input arguments
-  f1 <- files[1];
-  f2 <- files[2];
-  fout <- opt$'output-file';
-  bin_size = as.integer(opt$'bin-size')
-  by_dist = 4000000/bin_size
-  
-  # Error checking on input arguments
-  if (bin_size<=0) { write('Error: please specify a valid bin size!',stderr()); quit(save='no'); }
-  if (fout=="") { write('Error: please specify output file!',stderr()); quit(save='no'); }
-
-  # Load matrices
-  if (opt$verbose) { write("Loading data...",stderr()); }
-  x1 = as.matrix(read.table(f1,row.names=1,check.names=F))
-  x2 = as.matrix(read.table(f2,row.names=1,check.names=F))
-  if (nrow(x1)!=nrow(x2)) { write('Error: different matrix sizes in samples!',stderr()); quit(save='no'); }
-  n_rows = nrow(x1)
-  
-  # open output PDF file
-  pdf(fout);
-  
-  # Compute and plot correlations as a function of value
-  if (opt$verbose) { write("Computing/plotting correlations as a function of value...",stderr()); }
-  y1 = PreprocessMatrix(x1,preprocess='dist',pseudo=1,cutoff=0)
-  y2 = PreprocessMatrix(x2,preprocess='dist',pseudo=1,cutoff=0)
-  x1_rpkm = x1/(sum(x1)/1000000)/(bin_size/1000)
-  x2_rpkm = x2/(sum(x2)/1000000)/(bin_size/1000)
-  cutoffs = 2^seq(log2(0.01),log2(10.0),length.out=10)
-  r0 = sapply(cutoffs,function(c) { z1=x1_rpkm>=c; z2=x2_rpkm>=c; sum(z1*z2>0)/min(sum(z1),sum(z2))})   #sum(z1+z2>0)})
-  plot(cutoffs,r0,type='l',col='magenta',lwd='2',ylim=c(0,1),xlab='RPKM cutoff',ylab='reproducibility',main='reproducibility as a function of RPKM and enrichment cutoffs')
-  r = {}
-  cc = c(1.0,2.0,3.0)
-  clr = c('red','green4','blue')
-  for (k in 1:length(cc)) {
-    r[[cc[k]]] = sapply(cutoffs,function(c) { z1=(y1>=cc[k])&(x1_rpkm>=c); z2=(y2>=cc[k])&(x2_rpkm>=c); sum(z1*z2>0)/min(sum(z1),sum(z2))})    #sum(z1+z2>0)})
-    lines(cutoffs,r[[cc[k]]],col=clr[k],lwd='2')
-  }
-  legend("bottomright",legend=c(0,1,2,3),lty=rep(1,4),col=c('magenta',clr),text.col="black",bg="gray90")
-
-  # Compute and plot correlations as a function of distance
-  if (opt$verbose) { write("Computing/plotting correlations as a function of distance...",stderr()); }
-  D = row(x1)-col(x1)
-  distances = seq(0,n_rows/2,by=by_dist)
-  prep = c('none','log2','distmax')
-  c = {}
-  for (method in c('pearson','spearman')) {
-    c[[method]] = matrix(0,length(prep),length(distances)-1)
-    colnames(c[[method]]) = distances[-1]
-    rownames(c[[method]]) = prep
-    for (j in 1:length(prep)) {
-      y1 = PreprocessMatrix(x1_rpkm,preprocess=prep[j],pseudo=0.001,cutoff=0.05)
-      y2 = PreprocessMatrix(x2_rpkm,preprocess=prep[j],pseudo=0.001,cutoff=0.05)
-      for (k in 2:length(distances)) {
-        J = (D>distances[k-1])&(D<=distances[k])
-        c[[method]][j,k-1] = cor(as.vector(y1[J]),as.vector(y2[J]),method=method)
-      }
-    }
-    plot_matrix(c[[method]],main=paste(method,' correlation',sep=''),xlab='distance',ylab='correlation',q=1:length(distances[-1]),qlab=distances[-1],legend_pos="topright")
-  }
-  
-  # save
-  if (opt$verbose) { write("Saving data...",stderr()); }
-  save(cutoffs,r0,r,c,file=paste(fout,'.RData',sep=''));
-
-  # done
-  if (opt$verbose) { write("Done.",stderr()); }
-  quit(save='no');
-}
 
 
 
@@ -3032,13 +2944,12 @@ if (length(args)<1) {
   cat('  matrices     Creates matrices in text format using the estimated RData file.\n');
   cat('  corr         Computes all pairwise correlations of input matrices (tsv format).\n');
   cat('  compare      Compares estimated contact matrices.\n');
-  cat('  compare2     Compares estimated contact matrices (alternative version).\n');
   cat('  heatmaps     Creates heatmaps for estimated matrices in RData file.\n');
   cat('  snapshots    Creates snapshots (triangle format) for estimated matrices in RData file(s).\n');
   cat('  transloc     Computes translocation scores.\n');
   cat('  bscores      Computes boundary scores from input matrix (tsv) or estimated matrices (RData).\n');
+  cat('  bdiff        Identifies domain boundary differences in input samples.\n');
   cat('  domains      Identifies domains on input matrix (tsv) or estimated matrices (RData).\n');
-  cat('  domain-diff  Identifies domain boundary differences in input samples.\n');
   cat('  domain-cmp   Compares domain boundary scores.\n');
   cat('  loops        Identify loops (i.e. interactions).\n');
   cat('  loop-diff    Computes fold-changes between corresponding elements of two matrices.\n');
@@ -3090,14 +3001,12 @@ if (op=="preprocess") {
   op_corr(args);
 } else if (op=="compare") {
   op_compare(args);
-} else if (op=="compare2") {
-  op_compare2(args);
 } else if (op=="bscores") {
   op_bscores(args);
+} else if (op=="bdiff") {
+  op_bdiff(args);
 } else if (op=="domains") {
   op_domains(args);
-} else if (op=="domain-diff") {
-  op_domain_diff(args);
 } else if (op=="domain-cmp") {
   op_domain_cmp(args);
 } else if (op=="loops") {

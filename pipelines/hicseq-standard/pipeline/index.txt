@@ -29,7 +29,7 @@ domains-stats
 compare-boundaries
 compare-boundaries-stats
 
-#diff-domains
+#boundary-diff
 #
 hicplotter
 

@@ -18,7 +18,7 @@ endif
 set opt = "$1"
 
 # setup
-set op = diff-domains
+set op = boundary-diff
 set inpdirs = "inpdirs/*"
 set filter = "*.res_40kb"                  # work only with 40kb resolution
 set results = results
