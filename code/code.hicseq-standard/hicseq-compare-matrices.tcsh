@@ -38,9 +38,9 @@ foreach f (`cd $branch/$object1; ls -1 matrix.*.tsv matrix.*.RData | grep -vwE "
   endif
 end
 
-# Collect all the pearson and spearman coefficients along with sample and lambda info
+# Collect all correlation coefficients along with sample and lambda info
 set comp = `basename $outdir`
-set methods = `cd $outdir; ls -1 *.cor.*.tsv | cut -d'.' -f3 | sort -u`
+set methods = `cd $outdir; ls -1 *.cor.*.tsv | sed 's/[^.]\+\.cor\.//' | sed 's/\.tsv$//' | sort -u`
 set header = `cd $outdir; cat *.cor.*.tsv | head -1 | cut -f2-`
 foreach method ($methods)
   echo "SAMPLE-1 SAMPLE-2 COMPARISON METHOD CHROMOSOME LAMBDA $header" | tr ' ' '\t' >! $outdir/cor.$method.tsv
