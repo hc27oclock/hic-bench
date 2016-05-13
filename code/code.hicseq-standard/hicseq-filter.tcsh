@@ -16,19 +16,12 @@ set params = $2
 set branch = $3
 set objects = ($4)
 
-# test number of input objects
-set object = $objects[1]
-if ($#objects != 1) then
-  scripts-send2err "Error: this operation allows only one input object!"
-  exit 1
-endif
-
 # run parameter script
 source $params
 
 # indentify genome directory
-set genome = `./code/read-sample-sheet.tcsh $sheet $object genome`
-set enzyme = `./code/read-sample-sheet.tcsh $sheet $object enzyme`
+set genome = `./code/read-sample-sheet.tcsh $sheet "$objects" genome | sort -u`
+set enzyme = `./code/read-sample-sheet.tcsh $sheet "$objects" enzyme | sort -u`
 set genome_dir = inputs/genomes/$genome
 
 # create path
@@ -36,7 +29,8 @@ scripts-create-path $outdir/
 
 # filter
 scripts-send2err "Filtering aligned reads..."
-samtools view $branch/$object/alignments.bam | gtools-hic filter -v -E $genome_dir/$enzyme.fragments.bed --stats $outdir/stats_with_dups.tsv $filter_params | sort -t'	' -k2 >! $outdir/filtered_with_dups.reg
+set aligned_reads = `echo $objects | tr ' ' '\n' | awk -v d=$branch '{print d"/"$0"/alignments.bam"}'`
+samtools merge - $aligned_reads | samtools view - | gtools-hic filter -v -E $genome_dir/$enzyme.fragments.bed --stats $outdir/stats_with_dups.tsv $filter_params | sort -t'	' -k2 >! $outdir/filtered_with_dups.reg
 
 # remove duplicates
 scripts-send2err "Removing duplicates..."
