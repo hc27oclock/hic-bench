@@ -30,13 +30,23 @@ scripts-create-path $outdir/
 # -----  MAIN CODE BELOW --------------
 # -------------------------------------
 
+# compare matrices (one chromosome at a time)
+set jid = ()
 foreach f (`cd $branch/$object1; ls -1 matrix.*.tsv matrix.*.RData | grep -vwE "$chrom_excluded"`)
   set chr = `echo $f | cut -d'.' -f2`
   scripts-send2err "Processing matrix $f..."
   if ((-e $branch/$object1/$f) && (-e $branch/$object2/$f)) then
-    Rscript ./code/hic-matrix.r compare -v -o $outdir/$chr $compare_params $branch/$object1/$f $branch/$object2/$f             # TODO: use scripts-qsub-run to assign memory
+    set jpref = $outdir/__jdata/job.$chr
+    scripts-create-path $jpref
+    set chr_size = `cat $genome_dir/genome.bed | grep "^$chr	" | gtools-regions n | cut -f2`
+    set n_bins = `echo $chr_size/$bin_size+1 | bc`
+    set mem = `echo "100*2.0*$n_bins*$n_bins/1000000000+5" | bc`G                 # TODO: for estimated RData matrices, memory should take into account the number of lambdas...
+    scripts-send2err "-- requested memory = $mem"
+    set jid = ($jid `scripts-qsub-run $jpref 1 $mem Rscript ./code/hic-matrix.r compare -v -o $outdir/$chr $compare_params $branch/$object1/$f $branch/$object2/$f`)
   endif
 end
+scripts-send2err "Waiting for all jobs [$jid] to complete..."
+scripts-qsub-wait "$jid"
 
 # Collect all correlation coefficients along with sample and lambda info
 set comp = `basename $outdir`
