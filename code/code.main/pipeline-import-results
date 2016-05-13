@@ -1,0 +1,30 @@
+#!/bin/tcsh
+source ./code/code.main/custom-tcshrc      # customize shell environment
+
+##
+## USAGE: pipeline-import-results ANALYSIS-DIRECTORIES SAMPLE-NAMES
+##
+
+if ($#argv != 2) then
+  grep '^##' $0
+  exit
+endif
+
+set analyses = ($1)
+set samples = ($2)
+
+set task = `pwd | sed 's/.*\///'`
+set inpdirs = `echo $analyses | tr ' ' '\n' | sed 's/$/'"\/pipeline\/$task\/results/"`
+
+foreach s ($samples)
+  set paths = `find $inpdirs -name $s`
+  foreach p ($paths)
+    set new_p = `echo $p | sed 's/.*\/results\//results\//' | sed 's/.[^/]\+$//'`
+    scripts-send2err "$p ------------ $new_p/$s"
+    mkdir -p $new_p
+    (cd $new_p; rm -f $s; ln -s $p)
+  end
+end
+
+
+

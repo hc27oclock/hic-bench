@@ -2,7 +2,7 @@
 
 source ./inputs/params/params.tcsh
 
-set chrom_excluded = 'chr[MYX]'                                                      # excluded chromosomes
+set chrom_excluded = 'chr[MY]'                                                      # excluded chromosomes
 
 set boundary_scores_params = ( \
 --min-lambda=0.0 --max-lambda=1.0 --n-lambda=6 --gamma=0 \
@@ -12,9 +12,6 @@ set boundary_scores_params = ( \
 --skip-distance=0 \
 --flank-dist=`echo 500000/$bin_size | bc` \
 --tolerance=0.01 \
---alpha=0.50 \
---track-dist=`echo 2000000/$bin_size | bc` \
---presentation=none \
 )
 
 
