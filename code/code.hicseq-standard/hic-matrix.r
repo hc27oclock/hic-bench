@@ -389,12 +389,14 @@ compare_matrices <- function(matrices1,matrices2,distances,method,prep='none',ve
   n_rows = nrow(x)
   n_cols = ncol(x)
   full_matrix = is_full_matrix(x)
-  C = matrix(0,nrow=length(distances),ncol=n_matrices)
-  rownames(C) = distances
 
-  # distances
-  distances[distances>n_cols] = n_cols
-  distances = unique(sort(c(0,distances)))
+  # initialize
+  distances[distances<0] = 0                                 # min-dist = 0
+  distances[distances>n_cols] = n_cols                       # max-dist = number of columns
+  distances = unique(sort(distances))                        # sort and make unique
+  C = matrix(0,nrow=length(distances),ncol=n_matrices)       # correlation matrix
+  rownames(C) = distances
+  distances = unique(c(0,distances))                         # add dist=0 in the beginning so that we can compare successive pairs of distances
   
   # preprocess matrices
   if (prep!='none') {
@@ -404,12 +406,14 @@ compare_matrices <- function(matrices1,matrices2,distances,method,prep='none',ve
     }  
   }  
   
-  # compare  
+  # compare
+  dist_zero = TRUE                     # start always from dist=0 (alternative: start at d[i-1]) TODO: make parameter?
   if (full_matrix==TRUE) {
     I = col(matrices1[1,,])-row(matrices1[1,,])
     for (i in 2:length(distances)) {
       if (verbose==TRUE) { write(paste('Distance = ',distances[i],':',sep=''),stderr()); }
-      J = (I>=distances[i-1])&(I<=distances[i])
+      start = ifelse(dist_zero==TRUE,1,i-1)
+      J = (I>=distances[start])&(I<=distances[i])
       for (k in 1:n_matrices) {
         if (verbose==TRUE) { write(paste('Comparing matrices #',k,'...',sep=''),stderr()); }
         C[i-1,k] = mycor(as.vector(matrices1[k,,][J]),as.vector(matrices2[k,,][J]),method=method)
@@ -418,7 +422,8 @@ compare_matrices <- function(matrices1,matrices2,distances,method,prep='none',ve
   } else {
     for (i in 2:length(distances)) {
       if (verbose==TRUE) { write(paste('Distance = ',distances[i],':',sep=''),stderr()); }
-      J = distances[i-1]:distances[i]     # select columns according to distance
+      start = ifelse(dist_zero==TRUE,1,i-1)
+      J = distances[start]:distances[i]     # select columns according to distance
       for (k in 1:n_matrices) {
         if (verbose==TRUE) { write(paste('Comparing matrices #',k,'...',sep=''),stderr()); }
         C[i-1,k] = mycor(as.vector(matrices1[k,,J]),as.vector(matrices2[k,,J]),method=method)
@@ -426,6 +431,8 @@ compare_matrices <- function(matrices1,matrices2,distances,method,prep='none',ve
     }
   }
     
+  write.table(C)
+  
   return(C)
 }
 
@@ -488,11 +495,12 @@ PreprocessMatrix <- function(x,preprocess,pseudo=1,cutoff=0,max_dist=NA)
     y = PreprocessMatrix(x,"dist",pseudo=pseudo,cutoff=cutoff)
     y[y<1] = 1
     y = log2(y)
-  } else if (preprocess=="zscore") {
+  } else if ((preprocess=="zscore")|(preprocess=="log2-zscore")) {
     full_matrix = is_full_matrix(x)
     if (full_matrix) { y = MatrixRotate45(x,max_dist) } else { y = x }                         # rotate matrix, if input is full matrix
     i = 1; j = 3; while (j<=ncol(y)) { y[i,j:ncol(y)] = NA; i = i + 1; j = j + 2 }
     i = nrow(y); j = 2; while (j<=ncol(y)) { y[i,j:ncol(y)] = NA; i = i - 1; j = j + 2 }
+    if (preprocess=="log2-zscore") { y[y<=0] = NA; y = log2(y) }                               # log2-transform, if log2-zscore
     y_mean = apply(y,2,mean,na.rm=TRUE)                                                        # compute mean and stdev
     y_sd = apply(y,2,sd,na.rm=TRUE)
     y = t(apply(t(y)-y_mean,2,'/',y_sd))                                                       # compute z-scores
@@ -2721,7 +2729,6 @@ op_compare <- function(cmdline_args)
       for (method in methods) {
         id = paste(method,".prep_",prep,sep='')
         C[[id]] = matrix(0,length(distances),n_matrices)
-        rownames(C[[id]]) = distances
         C[[id]] = compare_matrices(e1$solObj,e2$solObj,distances=distances,method=method,prep=prep,verbose=TRUE)
       }
     }
@@ -2816,7 +2823,6 @@ op_compare <- function(cmdline_args)
       for (method in methods) {
         id = paste(method,".prep_",prep,sep='')
         C[[id]] = matrix(0,length(distances),n_matrices)
-        rownames(C[[id]]) = distances
         C[[id]] = compare_matrices(mat1,mat2,distances=distances,method=method,prep=prep,verbose=TRUE)
       }
     }

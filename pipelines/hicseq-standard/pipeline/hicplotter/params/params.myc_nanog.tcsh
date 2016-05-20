@@ -6,7 +6,7 @@ source ./inputs/params/params.tcsh
 set hicplotter_path = ./code/HiCPlotter2.py
 
 # create bedgraphs for boundary scores
-set bscores_branch = ../boundary-scores/results/boundary-scores.by_sample.prep_none/`echo $branch | sed 's/.*results\///'`
+set bscores_branch = ../boundary-scores/results/boundary-scores.by_sample.prep_none/`echo $branch | sed 's/.*results\///' | sed 's/^matrix-distnorm.[^/]\+\///'`
 set cell_type = `./code/code.main/read-sample-sheet.tcsh $sheet "$objects" cell_type`
 set methods = (inter DI ratio)
 set kappas = `cd $bscores_branch/$objects[1]; ls -1 all_scores.k=*.tsv | cut -d'.' -f2`

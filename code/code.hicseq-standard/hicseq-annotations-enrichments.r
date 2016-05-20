@@ -18,13 +18,14 @@ f <- function(r) { x = c(as.vector(r["locus1-marks"])); y = c(as.vector(r["locus
 args <- commandArgs(trailingOnly=TRUE)
 
 # Get the arguments (annotations table)
-if (length(args) != 4) {print("plot_annotations.R OUTDIR ANNOTATION-FILE FREQ-FILE CUTOFF"); quit(save="no")}
+if (length(args) != 5) {print("plot_annotations.R OUTDIR ANNOTATION-FILE FREQ-FILE NBEST SCORE-COLUMN"); quit(save="no")}
 
 # Get the annotation file
-outdir     <- args[1]
-annot_file <- args[2]
-freq_file  <- args[3]
-cutoff     <- as.integer(args[4])
+outdir       <- args[1]
+annot_file   <- args[2]
+freq_file    <- args[3]
+nbest        <- as.integer(args[4])
+score_column <- as.integer(args[5])
 
 # Read it
 annot <- read.table(sprintf("%s", annot_file), header=TRUE, stringsAsFactors=FALSE, check.names=FALSE)
@@ -35,9 +36,9 @@ N = length(unique(unlist(annot[,1:2])))
 sprintf("Number of unique loci: %s", N)
 
 # Sort based on distance-normalized values
-annot1 <- annot[order(annot[5],decreasing=TRUE),]
+annot1 <- annot[order(annot[score_column],decreasing=TRUE),]
 # Select only the top selected ones
-annot2 <- annot1[1:cutoff,,drop=FALSE]
+annot2 <- annot1[1:min(nrow(annot),nbest),,drop=FALSE]
 
 # Test if any marks are present in the top-scoring interactions
 if (sum((annot2[,"locus1-marks"]!="N/A")|(annot2[,"locus2-marks"]!="N/A"))==0) {
@@ -71,7 +72,6 @@ colnames(x1) = colnames(x2) = c("locus","marks")
 
 # First find the frequency entries that are represented in the top interactions selected
 freq <- read.table(freq_file, header=FALSE, row.names=1, stringsAsFactors=FALSE, check.names=FALSE)
-save(annot2_m2,freq,file='x.RData')
 
 # Now calculate the enrichment
 common = intersect(rownames(annot2_m2),rownames(freq))
@@ -79,7 +79,7 @@ r = rownames(freq) %in% common
 freq = freq[r,1]
 r = which(rownames(annot2_m2) %in% common)
 annot2_m2 = annot2_m2[r,r,drop=FALSE]
-enrich <- t((annot2_m2/cutoff)/freq)/freq
+enrich <- t((annot2_m2/nbest)/freq)/freq
 
 # save
 enrich_f <- paste(outdir,"enrich.tsv",sep="/")
