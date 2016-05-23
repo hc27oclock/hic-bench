@@ -1,0 +1,69 @@
+#!/bin/tcsh
+source ./code/code.main/custom-tcshrc      # customize shell environment
+
+##
+## USAGE: run [--dry-run]
+##
+
+# ~~~ Entries for auto-report ~~~ #
+#TITLE: HOMER Motif Finding
+#DESCRIPTION: This step of the pipeline runs HOMER findMotifs
+#FIGURE:
+#PARAMS:
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+# process command-line inputs
+# # this script only takes one argument ('--dry-run'); if more than 1 is passed, print the USAGE section in the error log and exit
+if ($#argv > 1) then
+  grep '^##' $0 | scripts-send2err
+  exit 1
+endif
+
+# get the argument passed to the script (e.g. '--dry-run')
+set opt = "$1"
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+# setup
+# the operation name, e.g. the name of the pipeline step directory; should also match the /code/ file name as below
+set op = homer_motif
+
+# the directory to take input files from; make sure this exists as a symlink!
+set inpdirs = "inpdirs/peaks"
+
+# the name of the directory to put the results in 
+set results = results
+
+# set a filter to select only certain pipeline branches
+set filter = "peaks.by_group.macs_broad/"
+
+# make the results directory
+scripts-create-path $results/
+scripts-send2err "=== Operation = $op ============="
+
+# set the resources to be passed to qsub; <# threads>,<amount RAM in GB>G
+# # example: 1 thread
+# # set resources = 1
+# # 8-16 threads
+# # set resources = 8-16
+# # 8 threads, 20GB RAM
+# # set resources = 8,20G
+set resources = 4
+
+# set the command to pass to the pipeline master explorer script
+set cmd = "./code/code.main/scripts-qsub-wrapper $resources ./code/chipseq-$op.tcsh"
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+# generate run script
+Rscript ./code/code.main/pipeline-master-explorer.r -v -F "$filter" "$cmd" $results/$op "params/params.*.tcsh" "$inpdirs" "" "sample" 1
+
+# run and wait until done!
+if ("$opt" != "--dry-run") scripts-submit-jobs ./$results/.db/run
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+
