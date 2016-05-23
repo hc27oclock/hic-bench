@@ -70,6 +70,55 @@ annotatePeaks.pl "${branch}/${objects}/peaks.bed" "$genome" -annStats $outdir/an
 set Peak_Type_Stats = $outdir/peak_type_stats.txt
 tail -n +2 $outdir/annotated_peaks.txt | cut -f8 | cut -d '(' -f1 | sort | uniq -c | sed -e 's/ *//' -e 's/ /\t/' -e "s/'//" -e 's/NA/Other/' -e 's/ //' > $Peak_Type_Stats
 
+# plot the number of peaks per type
+Rscript --vanilla - $outdir $Peak_Type_Stats <<HERE
+  ## R code
+  cat("\nR loaded\n")
+  # get R script args
+  args <- commandArgs(TRUE)
+  cat("Script args are:\n")
+  args
+
+  OutDir<-args[1]
+  PeakTypesTable_file<-args[2]
+  
+  # read in the table from the file
+  PeakTypesTable<-read.table(file = PeakTypesTable_file,header = FALSE,sep = "\t")
+
+  # format the table
+  rownames(PeakTypesTable)<-PeakTypesTable$V2
+  PeakTypesTable<-PeakTypesTable["V1"]
+  colnames(PeakTypesTable)<-"NumberPeaks"
+
+  # get the total peaks
+  TotalPeaks<-sum(PeakTypesTable[["NumberPeaks"]])
+  
+  # Calculate the percent 
+  PeakTypesTable[["PercentPeaks"]]<-signif((PeakTypesTable[["NumberPeaks"]]/TotalPeaks)*100,digits=3)
+  
+  # save the values to be plotted into a transposed matrix, since thats what the barplot() likes
+  Peaks_Raw_Matrix<-t(as.matrix(PeakTypesTable["NumberPeaks"]))
+  Peaks_Pcnt_Matrix<-t(as.matrix(PeakTypesTable["PercentPeaks"])) # don't actually need this..
+  
+  
+  # make a barplot
+  # # default par: par()$mar # [1] 5.1 4.1 4.1 2.1
+  pdf(file = paste0(OutDir,"/peaks_type_barplots.pdf"),width = 8,height = 8)
+  par(mar=c(5.1, 7.1, 4.1, 2.1))
+  barplot(Peaks_Raw_Matrix,main="Number of peaks",horiz = TRUE,las=1,cex.names=1)
+  dev.off()
+  
+  # write a CSV of the final table
+  # # peel off the rownames into a separate vector
+  Types<-row.names(PeakTypesTable)
+  write.csv(x = cbind(Types,PeakTypesTable), file = paste0(OutDir,"/peaks_type_table.csv"),quote = FALSE,row.names = FALSE)
+
+
+HERE
+
+# https://github.com/stevekm/Bioinformatics/blob/88ab3a029cd99978b33676bcae3c2302574053bd/HOMER_motif_analysis/peak_types_plot.R
+
+
 # -------------------------------------
 # -----  MAIN CODE ABOVE --------------
 # -------------------------------------
