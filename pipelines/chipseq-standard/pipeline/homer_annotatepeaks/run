@@ -38,7 +38,7 @@ set inpdirs = "inpdirs/peaks"
 set results = results
 
 # set a filter to select only certain pipeline branches
-set filter = "peaks.by_group.macs_broad/"
+# set filter = "peaks.by_group.macs_broad/"
 
 # make the results directory
 scripts-create-path $results/
@@ -60,7 +60,10 @@ set cmd = "./code/code.main/scripts-qsub-wrapper $resources ./code/chipseq-$op.t
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 # generate run script
-Rscript ./code/code.main/pipeline-master-explorer.r -v -F "$filter" "$cmd" $results/$op "params/params.*.tcsh" "$inpdirs" "" "sample" 1
+Rscript ./code/code.main/pipeline-master-explorer.r -v "$cmd" $results/$op "params/params.*.tcsh" "$inpdirs" "" "sample" 1
+
+# with filter:
+# Rscript ./code/code.main/pipeline-master-explorer.r -v -F "$filter" "$cmd" $results/$op "params/params.*.tcsh" "$inpdirs" "" "sample" 1
 
 # run and wait until done!
 if ("$opt" != "--dry-run") scripts-submit-jobs ./$results/.db/run
