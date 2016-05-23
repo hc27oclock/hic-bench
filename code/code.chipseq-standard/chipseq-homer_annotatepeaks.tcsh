@@ -64,13 +64,19 @@ echo "pwd is $var"
 # findMotifsGenome.pl ${branch}/${objects}/peaks.bed $genome $outdir/ -p $threads -preparsedDir $outdir/preparsed $motif_options
 # annotatePeaks.pl <peak/BED file> <genome>   > <output file>
 
-annotatePeaks.pl "${branch}/${objects}/peaks.bed" "$genome" -annStats $outdir/annotation_stats.txt -go $outdir/gene_ontolgy -genomeOntology $outdir/genome_ontolgy > $outdir/annotated_peaks.txt
+# annotatePeaks.pl "${branch}/${objects}/peaks.bed" "$genome" -annStats $outdir/annotation_stats.txt -go $outdir/gene_ontolgy -genomeOntology $outdir/genome_ontolgy > $outdir/annotated_peaks.txt
+annotatePeaks.pl "${branch}/${objects}/peaks.bed" "$genome" -annStats $outdir/annotation_stats.txt > $outdir/annotated_peaks.txt
+
+
 
 # get the number of types of peaks
 set Peak_Type_Stats = $outdir/peak_type_stats.txt
 tail -n +2 $outdir/annotated_peaks.txt | cut -f8 | cut -d '(' -f1 | sort | uniq -c | sed -e 's/ *//' -e 's/ /\t/' -e "s/'//" -e 's/NA/Other/' -e 's/ //' > $Peak_Type_Stats
 
+
 # plot the number of peaks per type
+module unload r; module load r/3.3.0
+
 Rscript --vanilla - $outdir $Peak_Type_Stats <<HERE
   ## R code
   cat("\nR loaded\n")
@@ -82,14 +88,18 @@ Rscript --vanilla - $outdir $Peak_Type_Stats <<HERE
   OutDir<-args[1]
   PeakTypesTable_file<-args[2]
   
+  #quit()
+  
   # read in the table from the file
   PeakTypesTable<-read.table(file = PeakTypesTable_file,header = FALSE,sep = "\t")
+  PeakTypesTable
 
   # format the table
-  rownames(PeakTypesTable)<-PeakTypesTable$V2
+  rownames(PeakTypesTable)<-PeakTypesTable[["V2"]]
   PeakTypesTable<-PeakTypesTable["V1"]
   colnames(PeakTypesTable)<-"NumberPeaks"
-
+  PeakTypesTable
+  
   # get the total peaks
   TotalPeaks<-sum(PeakTypesTable[["NumberPeaks"]])
   
@@ -102,7 +112,7 @@ Rscript --vanilla - $outdir $Peak_Type_Stats <<HERE
   
   
   # make a barplot
-  # # default par: par()$mar # [1] 5.1 4.1 4.1 2.1
+  # # default par: par() mar # [1] 5.1 4.1 4.1 2.1
   pdf(file = paste0(OutDir,"/peaks_type_barplots.pdf"),width = 8,height = 8)
   par(mar=c(5.1, 7.1, 4.1, 2.1))
   barplot(Peaks_Raw_Matrix,main="Number of peaks",horiz = TRUE,las=1,cex.names=1)
@@ -112,6 +122,7 @@ Rscript --vanilla - $outdir $Peak_Type_Stats <<HERE
   # # peel off the rownames into a separate vector
   Types<-row.names(PeakTypesTable)
   write.csv(x = cbind(Types,PeakTypesTable), file = paste0(OutDir,"/peaks_type_table.csv"),quote = FALSE,row.names = FALSE)
+  save.image(file = paste0(OutDir,"/R_session.Rdata") )
 
 
 HERE
