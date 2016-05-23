@@ -64,8 +64,10 @@ echo "pwd is $var"
 # findMotifsGenome.pl ${branch}/${objects}/peaks.bed $genome $outdir/ -p $threads -preparsedDir $outdir/preparsed $motif_options
 # annotatePeaks.pl <peak/BED file> <genome>   > <output file>
 
-# annotatePeaks.pl "${branch}/${objects}/peaks.bed" "$genome" -annStats $outdir/annotation_stats.txt -go $outdir/gene_ontolgy -genomeOntology $outdir/genome_ontolgy > $outdir/annotated_peaks.txt
-annotatePeaks.pl "${branch}/${objects}/peaks.bed" "$genome" -annStats $outdir/annotation_stats.txt > $outdir/annotated_peaks.txt
+annotatePeaks.pl "${branch}/${objects}/peaks.bed" "$genome" -annStats $outdir/annotation_stats.txt -go $outdir/gene_ontolgy -genomeOntology $outdir/genome_ontolgy > $outdir/annotated_peaks.txt
+
+# without gene genome ontology:
+# annotatePeaks.pl "${branch}/${objects}/peaks.bed" "$genome" -annStats $outdir/annotation_stats.txt > $outdir/annotated_peaks.txt
 
 
 
