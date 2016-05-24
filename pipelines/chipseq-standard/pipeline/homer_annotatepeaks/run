@@ -51,7 +51,8 @@ scripts-send2err "=== Operation = $op ============="
 # # set resources = 8-16
 # # 8 threads, 20GB RAM
 # # set resources = 8,20G
-set resources = 1
+set resources = 1,20G
+# added 20GB RAM requirement to run
 
 # set the command to pass to the pipeline master explorer script
 set cmd = "./code/code.main/scripts-qsub-wrapper $resources ./code/chipseq-$op.tcsh"
