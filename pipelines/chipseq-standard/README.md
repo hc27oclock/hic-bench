@@ -1,5 +1,9 @@
 # ChIP-Seq Standard Pipeline
 
+User manual for the pipeline can be found here:
+https://github.com/NYU-BFX/hic-bench_documentation/blob/master/HiC-Bench_manual.pdf
+ChIP-Seq pipeline usage follows the same structure and format as the HiC pipleline instructions listed there.
+
 ## 0. Create a new analysis
 
 If a new analysis project has not already been created, do so with the following command:
