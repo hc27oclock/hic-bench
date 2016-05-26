@@ -2,6 +2,7 @@
 
 source ./inputs/params/params.tcsh
 
-set nbest = 10000            # choose top-scoring interactions to calculate enrichments
+set nbest = 50000            # choose top-scoring interactions to calculate enrichments
+set score_column = 5         # dist-norm
 
 

@@ -37,13 +37,17 @@ scripts-create-path $outdir/
 
 # create table of interactions for each chromosome
 set inpdir = $branch/$object
-set filter_branch = ../filter/results/`echo $branch | sed 's/.*\/\(filter\.\)/\1/'`
-set n_reads = `cat $filter_branch/$object/stats.tsv | grep '^ds-accepted-intra	' | cut -f2`
+if (-e $inpdir/stats.tsv) then
+  set n_reads = `cat $inpdir/stats.tsv | grep '^ds-accepted-intra	' | cut -f2`
+else
+  set n_reads = 1
+endif
+scripts-send2err "number of reads for scaling = $n_reads"
 set jid = 
 foreach mat (`cd $inpdir; ls -1 matrix.*.tsv matrix.*.RData | grep -vwE "$chrom_excluded"`)
   scripts-send2err "Processing input matrix $inpdir/$mat..."
   set outmatdir = `echo $mat | sed 's/\.tsv$//' | sed 's/\.RData$//'`
-  set mem = `./code/calc-matrix-memory.tcsh $inpdir/$mat 2 5`
+  set mem = `./code/calc-matrix-memory.tcsh $inpdir/$mat 3.0 5`
   scripts-send2err "requested memory = $mem"
   set jdata = $outdir/__jdata
   scripts-create-path $jdata/

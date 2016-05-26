@@ -40,7 +40,6 @@ set loci_reg = $branch/$objects[1]/loci.reg
 cat $loci_reg | cut -d' ' -f3 | sed 's/$/\/'$bin_size'/' | bc | paste - $loci_reg | cut -d' ' -f1 | sort -u | cut -f2 | sort | uniq -c | sed "s/^ */$n_bins /" | tools-cols 2 0 1 | sed 's/ /\t/' | tools-vectors div -n 6 >! $outdir/freq.tsv
 
 # compute stats
-set score_column = 3    # raw unprocessed score (directly from input matrix; no scaling, no dist-norm)
 Rscript ./code/hicseq-annotations-enrichments.r $outdir $branch/$objects[1]/table.annotated.tsv $outdir/freq.tsv $nbest $score_column
 
 # -------------------------------------

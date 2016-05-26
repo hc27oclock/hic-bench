@@ -11,6 +11,10 @@ if ($#argv != 0) then
   exit
 endif
 
+# install required R packages
+source inputs/params/params.tcsh
+Rscript ./code/code.main/install-r-packages.r
+
 # validate sample sheet
 scripts-send2err "Validating sample sheet..."
 ./code/validate-sample-sheet.tcsh inputs/sample-sheet.tsv

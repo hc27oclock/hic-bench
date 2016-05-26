@@ -1273,8 +1273,9 @@ op_loopdiff <- function(cmdline_args)
     make_option(c("-b","--bin-size"), default=0, help="Bin size in nucleotides [default \"%default\"]."),
     make_option(c("--n-reads"), default="", help="Comma-separated list of total number of reads (required) [default \"%default\"]."),
     make_option(c("--min-count"), default=20, help="Minimum Hi-C count (scaled) [default \"%default\"]."),
-    make_option(c("--loop-cutoff"), default=5.0, help="Loop enrichment score cutoff [default \"%default\"]."),
-    make_option(c("--min-distance"), default=100000, help="Minimum loop distance in nucleotides [default \"%default\"]."),
+    make_option(c("--min-zscore"), default=2.0, help="Loop z-score cutoff [default \"%default\"]."),
+    make_option(c("--min-distance"), default=40000, help="Minimum loop distance in nucleotides [default \"%default\"]."),
+    make_option(c("--max-distance"), default=10000000, help="Maximum loop distance in nucleotides [default \"%default\"]."),
     make_option(c("--bins"), default="", help="Comma-separated list of bins to be included in the snapshot [default \"%default\"]."),
     make_option(c("-L","--sample-labels"), default="", help="Comma-separated list of sample labels (required) [default \"%default\"].")
   );
@@ -1291,8 +1292,9 @@ op_loopdiff <- function(cmdline_args)
   n_reads = as.integer(strsplit(opt$'n-reads',',')[[1]])
   bin_size = opt$'bin-size'
   min_count = opt$'min-count'
-  loop_cutoff = opt$'loop-cutoff'
+  min_zscore = opt$'min-zscore'
   min_dist = opt$'min-distance'
+  max_dist = opt$'max-distance'
   sample_labels = opt$'sample-labels'
   bins = as.integer(strsplit(opt$bins,',')[[1]])
   if (sample_labels=="") { write('Error: please specify sample labels!',stderr()); quit(save='no'); }
@@ -1321,12 +1323,12 @@ op_loopdiff <- function(cmdline_args)
       m[[f]] = env1$x                                                                                   # raw matrix
       m_norm[[f]] = env1$solObj[opt$'lambda-id',,]                                                      # estimated matrix
     } else {
-      m[[f]] = as.matrix(read.table(files[f],check.names=F,row.names=1))                                # row labels are necessary: should include locus information
-      if ((opt$debug==TRUE)&(is_full_matrix(m[[f]])==FALSE)) m[[f]] = MatrixInverseRotate45(m[[f]])     # only for debugging
+      m[[f]] = as.matrix(read.table(files[f],check.names=F,row.names=1))                                             # row labels are necessary: should include locus information
+      if ((opt$debug==TRUE)&(is_full_matrix(m[[f]])==FALSE)) m[[f]] = MatrixInverseRotate45(m[[f]])                  # only for debugging
       m_norm[[f]] = PreprocessMatrix(m[[f]],'dist',pseudo=1,cutoff=0)
     }
-    m_scaled[[f]] = m[[f]]/(n_reads[f]/max(n_reads))                                                    # scaled matrix
-    m_zscore[[f]] = PreprocessMatrix(m[[f]],'zscore',pseudo=1,cutoff=0)                                 # z-scores
+    m_scaled[[f]] = m[[f]]/(n_reads[f]/max(n_reads))                                                                 # scaled matrix
+    m_zscore[[f]] = PreprocessMatrix(m[[f]],preprocess='zscore',pseudo=0,cutoff=-Inf,max_dist=max_dist/bin_size)     # z-scores
   }
   if (sum(apply(sapply(m,dim),1,function(v) {max(v)-min(v)})>0)!=0) { write('Error: input matrices should have the same dimensions!',stderr()); quit(save='no'); }
   full_matrix = is_full_matrix(m[[1]])
@@ -1335,7 +1337,7 @@ op_loopdiff <- function(cmdline_args)
   if (full_matrix) { D = col(m[[1]])-row(m[[1]])
   } else { D = col(m[[1]])-1 }
   D = D*bin_size/1000
-  i_removed = ((m_scaled[[1]]<min_count)&(m_scaled[[2]]<min_count)) | ((m_norm[[1]]<loop_cutoff)&(m_norm[[2]]<loop_cutoff)) | (abs(D)<min_dist/1000)
+  i_removed = ((m_scaled[[1]]<min_count)&(m_scaled[[2]]<min_count)) | ((m_norm[[1]]<min_zscore)&(m_norm[[2]]<min_zscore)) | (abs(D)<min_dist/1000)
   if (sum(!i_removed)==0) { write("No interactions found!", stderr()); quit(save='no') }
   
   # create plots
@@ -1452,9 +1454,10 @@ op_loops <- function(cmdline_args)
     make_option(c("--n-reads"), default="", help="Comma-separated list of total number of reads per sample (required) [default \"%default\"]."),
     make_option(c("--bin-size"), default=0, help="Bin size in nucleotides for RPKB calculation [default \"%default\"]."),
     make_option(c("--lambda-id"), default=1, help="Lambda to be selected from RData file (if applicable) [default \"%default\"]."),
-    make_option(c("--rpk2b-cutoff"), default=1.0, help="RPK2B score cutoff [default \"%default\"]."),
-    make_option(c("--loop-cutoff"), default=5.0, help="Distance-normalized loop score cutoff [default \"%default\"]."),
+    make_option(c("--min-count"), default=50, help="Hi-C count cutoff [default \"%default\"]."),
+    make_option(c("--min-zscore"), default=2.0, help="Loop z-score cutoff [default \"%default\"]."),
     make_option(c("--min-distance"), default=40000, help="Minimum loop distance in nucleotides [default \"%default\"]."),
+    make_option(c("--max-distance"), default=10000000, help="Maximum loop distance in nucleotides [default \"%default\"]."),
     make_option(c("--debug"), action="store_true",default=FALSE, help="Debugging mode (using matrix inverse-rotate).")
   )
   usage = '\
@@ -1477,9 +1480,10 @@ Input: \
   out_dir = opt$'output-dir'
   n_reads = as.integer(strsplit(opt$'n-reads', ",")[[1]])
   bin_size = opt$'bin-size'
-  rpk2b_cutoff = opt$'rpk2b-cutoff'
-  loop_cutoff = opt$'loop-cutoff'
+  min_count = opt$'min-count'
+  min_zscore = opt$'min-zscore'
   min_dist = opt$'min-distance'
+  max_dist = opt$'max-distance'
   sample_labels = opt$'sample-labels'
 
   # Error checking
@@ -1498,7 +1502,6 @@ Input: \
   x_raw = {}
   x_scaled = {}
   x_norm = {}
-  prep = 'dist'  #'zscore' # 'dist'
   for (f in 1:n_files) {
     if (opt$verbose) write(paste("Loading input matrix '",files[f],"'...",sep=''),stderr())
     ext = strsplit(files[f],'.*[.]')[[1]][2]
@@ -1507,15 +1510,15 @@ Input: \
       load(files[f],est)
       #if ((est$opt$preprocess!='zscore')&&(est$opt$preprocess!='dist')&&(est$opt$preprocess!='distlog2')) { write("Error: estimation preprocessing should be dist or distlog2 for this operation!",stderr()); quit(save='no') }
       if ((opt$'lambda-id'<1)||(opt$'lambda-id'>length(est$lambdas))) { write("Error: lambda id out of bounds!",stderr()); quit(save='no') }
-      x_raw[[f]] = est$x                                                                                            # raw matrix
-      x_norm[[f]] = est$solObj[opt$'lambda-id',,]                                                                   # estimated distance-normalized matrix
+      x_raw[[f]] = est$x                                                                                                    # raw matrix
+      x_norm[[f]] = est$solObj[opt$'lambda-id',,]                                                                           # estimated distance-normalized matrix
     } else {  
-      x_raw[[f]] = as.matrix(read.table(files[f],check.names=F,row.names=1))                                        # row labels are necessary (locus information)
-      if ((opt$debug==TRUE)&(is_full_matrix(x_raw[[f]])==FALSE)) x_raw[[f]] = MatrixInverseRotate45(x_raw[[f]])     # only for debugging
-      x_norm[[f]] = PreprocessMatrix(x_raw[[f]],prep,pseudo=1,cutoff=0)                                             # distance-normalized matrix
+      x_raw[[f]] = as.matrix(read.table(files[f],check.names=F,row.names=1))                                                # row labels are necessary (locus information)
+      if ((opt$debug==TRUE)&(is_full_matrix(x_raw[[f]])==FALSE)) x_raw[[f]] = MatrixInverseRotate45(x_raw[[f]])             # only for debugging
+      x_norm[[f]] = PreprocessMatrix(x_raw[[f]],preprocess='zscore',pseudo=0,cutoff=-Inf,max_dist=max_dist/bin_size)        # distance-normalized matrix
     }
     a = ifelse(n_reads[f]<=0, 1, (n_reads[f]/1e9)*(bin_size/1000)^2)
-    x_scaled[[f]] = x_raw[[f]]/a                                                                                    # scaled matrix
+    x_scaled[[f]] = x_raw[[f]]/a                                                                                            # scaled matrix
     full_matrix[f] = is_full_matrix(x_raw[[f]])
   }
   
@@ -1526,8 +1529,8 @@ Input: \
   if (opt$verbose) write("Filtering interactions...",stderr())
   if (full_matrix[1]) { D = col(x_raw[[1]])-row(x_raw[[1]]) } else { D = col(x_raw[[1]])-1 }
   D = D*bin_size
-  z = sapply(1:n_files,function(k) (x_norm[[k]]>=loop_cutoff) & (x_scaled[[k]]>=rpk2b_cutoff))         # apply scaled count and distance-normalized score cutoffs
-  i_selected = apply(z,1,max) & (abs(as.vector(D))>=min_dist)                                          # apply minimum distance cutoff
+  z = sapply(1:n_files,function(k) (x_norm[[k]]>=min_zscore) & (x_raw[[k]]>=min_count))               # apply minimum Hi-C count cutoff
+  i_selected = apply(z,1,max) & (abs(as.vector(D))>=min_dist)                                         # apply minimum distance cutoff
   n_selected = sum(i_selected)
   if (opt$verbose) write(paste("Selected interactions = ",n_selected,sep=''),stderr())
   if (n_selected==0) { write("No interactions found!", stderr()); system(paste('touch ',out_dir,'/loops.tsv',sep='')); quit(save='no') }
@@ -1560,8 +1563,8 @@ Input: \
   if (opt$verbose) write("Creating plots...",stderr())
   pdf(paste(out_dir,'/plots.pdf',sep=''))
   par(mfrow=c(2,2))
-  boxplot(lapply(x_scaled,function(mat) mat[mat>=rpk2b_cutoff]),log='y',names=sample_labels,main='Scaled Hi-C counts')
-  boxplot(lapply(x_norm,function(mat) mat[mat>=loop_cutoff]),log='y',names=sample_labels,main='Distance-normalized Hi-C scores')
+  boxplot(lapply(x_raw,function(mat) mat[mat>=min_count]),log='y',names=sample_labels,main='Scaled Hi-C counts')
+  boxplot(lapply(x_norm,function(mat) mat[mat>=min_zscore]),log='y',names=sample_labels,main='Distance-normalized Hi-C scores')
   counts = lapply(x_scaled,function(mat) { z=calc_counts_per_distance(mat); z=z/max(z); return(z)})
   colors = c('red','green','blue','magenta','black','purple','yellow')
   colors = as.vector(replicate(length(counts)%/%length(colors)+1,colors))[1:length(counts)]
@@ -2000,6 +2003,7 @@ IdentifyDomains = function(est, opt, full_matrix)
     kk = 1
     while (kk<=length(x_order)) {
       k = x_order[kk]
+      if (x[k]<alpha) break
       minval_left = min(x[max(k-maxd,1):k],na.rm=TRUE)                                                                    # minimum value to the left of k
       minval_right = min(x[k:min(k+maxd,n)],na.rm=TRUE)                                                                   # minimum value to the right of k
       minpos_left = max(k-maxd,1) + min(which(x[max(k-maxd,1):k]<=minval_left)) - 1                                       # minimum left position
@@ -2007,8 +2011,8 @@ IdentifyDomains = function(est, opt, full_matrix)
       while ((minpos_left>1)&(!is.na(x[minpos_left]))&(x[minpos_left]<=minval_left)) minpos_left = minpos_left-1          # extend left position if lower (or equal) values are found
       while ((minpos_right<n)&(!is.na(x[minpos_right]))&(x[minpos_right]<=minval_right)) minpos_right = minpos_right+1    # extend right position if lower (or equal) values are found
       for (j in minpos_left:minpos_right) if (y[j]==0) y[j] = -1                                                          # mask these bins from subsequent computations
-      if (x[k]>=alpha) y[k] = 1
-      while ((kk<=length(x_order))&&(y[x_order[kk]]!=0)) kk = kk + 1
+      if (x[k]/max(x[minpos_left],x[minpos_right],na.rm=TRUE)>=1.1) y[k] = 1                                              # TODO: parametrize this?
+      while ((kk<=length(x_order))&&(y[x_order[kk]]!=0)) kk = kk + 1                                                      # skip masked bins
     }  
 
     # add boundaries at NA values  
@@ -2025,8 +2029,8 @@ IdentifyDomains = function(est, opt, full_matrix)
   # function: find boundaries as local maxima
   find_boundaries = function(bscores,opt,cutoff)
   {
-#    bscores = local_maxima_score(bscores,maxd=opt$'flank-dist',scale=FALSE)                                      # local normalization (no scaling to [0,1]) [ TODO: enable this as an option? ]
-    b = local_maxima_new(as.vector(bscores),tolerance=opt$tolerance,alpha=cutoff,maxd=opt$'flank-dist')               # boundaries are local maxima of boundary scores
+#    if (opt$"local-norm"==TRUE) bscores = local_maxima_score(as.vector(bscores),maxd=opt$'flank-dist',scale=FALSE)      # local normalization (no scaling to [0,1])
+    b = local_maxima_new(as.vector(bscores),tolerance=opt$tolerance,alpha=cutoff,maxd=opt$'flank-dist')         # boundaries are local maxima of boundary scores
     return(b)
   }
   
@@ -2052,7 +2056,7 @@ IdentifyDomains = function(est, opt, full_matrix)
     c_max = max(bscores,na.rm=TRUE)
     c_min = 0
     cutoffs = unique(sort(bscores))
-    cutoffs = cutoffs[seq(length(cutoffs)/2,length(cutoffs),by=5)]
+    cutoffs = cutoffs[seq(1,length(cutoffs),by=5)]
     for (cutoff in cutoffs) {
       # find boundaries on observed input
       b = find_boundaries(bscores,opt,cutoff)
@@ -2150,6 +2154,7 @@ op_domains <- function(cmdline_args)
     make_option(c("--distance2"), default=0, help="Distance from diagonal (in number of bins) used for boundary score computation [default \"%default\"]."),
     make_option(c("--skip-distance"), default=1, help="Distance from diagonal (in number of bins) to be skipped [default \"%default\"]."),
     make_option(c("--method"), default="ratio", help="Boundary score method: ratio, diffratio, intra-max, intra-min, intra-right, intra-left, inter, diff, DI, product-max, product-min [default \"%default\"]."),
+#    make_option(c("--local-norm"), action="store_true",default=FALSE, help="Apply local normalization to boundary scores"),
     make_option(c("--tolerance"), default=0.01, help="Percent difference cutoff for merging local maxima [default \"%default\"]."),
     make_option(c("--fdr"), default=1.0, help="False discovery rate cutoff [default \"%default\"]."),
     make_option(c("--flank-dist"), default=10, help="Local maxima neighborhood radius (in number of bins) [default \"%default\"]."),

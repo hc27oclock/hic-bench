@@ -61,7 +61,6 @@ for (i in 1:length(dirs)) {
 
 # Convert the list to data frame 
 domain_size.df <- rbindlist(l1)
-write.table(domain_size.df, "test_df.tsv", quote=FALSE, col.names=TRUE, row.names=FALSE,sep="\t")
 
 # Summarize stats per chromosome
 final.df <- ddply(domain_size.df, c("Group", "Kappa", "Chrom"), summarise, mean=mean(Size), min=min(Size), max=max(Size), rom=(max(Size)-min(Size))/mean(Size), N=length(Size), sd = sd(Size), se = sd/sqrt(N), seom=se/mean)

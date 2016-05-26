@@ -32,8 +32,11 @@ annot <- read.table(sprintf("%s", annot_file), header=TRUE, stringsAsFactors=FAL
 
 # Get the unique loci
 N = length(unique(unlist(annot[,1:2])))
-# Print the number
 sprintf("Number of unique loci: %s", N)
+if (N==0) {
+  write("Warning: no entries found in input table.",stderr())
+  quit(save='no')
+}
 
 # Sort based on distance-normalized values
 annot1 <- annot[order(annot[score_column],decreasing=TRUE),]
