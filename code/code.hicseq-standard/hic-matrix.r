@@ -1262,22 +1262,23 @@ op_stats <- function(cmdline_args)
 #  OPERATION = DIFF
 # ########################
 
-op_loopdiff <- function(cmdline_args) 
+op_diff <- function(cmdline_args) 
 {
   # process command-line arguments
   option_list <- list(
     make_option(c("-v","--verbose"), action="store_true",default=FALSE, help="Print more messages."),
     make_option(c("--debug"), action="store_true",default=FALSE, help="Debugging mode (using matrix inverse-rotate)."),
     make_option(c("--lambda-id"), default=1, help="Lambda to be selected from RData file (if applicable) [default \"%default\"]."),
+    make_option(c("-L","--sample-labels"), default="", help="Comma-separated list of sample labels (required) [default \"%default\"]."),
     make_option(c("-o","--output-dir"), default="", help="Output directory (required) [default \"%default\"]."),
     make_option(c("-b","--bin-size"), default=0, help="Bin size in nucleotides [default \"%default\"]."),
+    make_option(c("--table-output"), action="store_true",default=FALSE, help="Output in table format (default is matrix format)."),
     make_option(c("--n-reads"), default="", help="Comma-separated list of total number of reads (required) [default \"%default\"]."),
     make_option(c("--min-count"), default=20, help="Minimum Hi-C count (scaled) [default \"%default\"]."),
     make_option(c("--min-zscore"), default=2.0, help="Loop z-score cutoff [default \"%default\"]."),
     make_option(c("--min-distance"), default=40000, help="Minimum loop distance in nucleotides [default \"%default\"]."),
     make_option(c("--max-distance"), default=10000000, help="Maximum loop distance in nucleotides [default \"%default\"]."),
-    make_option(c("--bins"), default="", help="Comma-separated list of bins to be included in the snapshot [default \"%default\"]."),
-    make_option(c("-L","--sample-labels"), default="", help="Comma-separated list of sample labels (required) [default \"%default\"].")
+    make_option(c("--bins"), default="", help="Comma-separated list of bins to be included in the snapshot [default \"%default\"].")
   );
   usage = 'hic-matrix.r diff [OPTIONS] MATRIX-1(tsv/RData) MATRIX-2(tsv/RData)';
   
@@ -1311,21 +1312,17 @@ op_loopdiff <- function(cmdline_args)
   if (opt$verbose) { write("Loading matrices...",stderr()); }
   m = { }
   m_scaled = { }
-  m_norm = { }
   m_zscore = { }
   for (f in 1:length(files)) {
     ext = strsplit(files[f],'.*[.]')[[1]][2]
     if (ext=='RData') {
       env1 = new.env()
       load(files[f],env1)
-      if ((env1$opt$preprocess!='dist')&&(env1$opt$preprocess!='distlog2')) { write("Error: estimation preprocessing should be dist or distlog2 for this operation!",stderr()); quit(save='no') }
       if ((opt$'lambda-id'<1)||(opt$'lambda-id'>length(env1$lambdas))) { write("Error: lambda id out of bounds!",stderr()); quit(save='no') }
-      m[[f]] = env1$x                                                                                   # raw matrix
-      m_norm[[f]] = env1$solObj[opt$'lambda-id',,]                                                      # estimated matrix
+      m[[f]] = env1$solObj[opt$'lambda-id',,]                                                      # estimated matrix
     } else {
       m[[f]] = as.matrix(read.table(files[f],check.names=F,row.names=1))                                             # row labels are necessary: should include locus information
       if ((opt$debug==TRUE)&(is_full_matrix(m[[f]])==FALSE)) m[[f]] = MatrixInverseRotate45(m[[f]])                  # only for debugging
-      m_norm[[f]] = PreprocessMatrix(m[[f]],'dist',pseudo=1,cutoff=0)
     }
     m_scaled[[f]] = m[[f]]/(n_reads[f]/max(n_reads))                                                                 # scaled matrix
     m_zscore[[f]] = PreprocessMatrix(m[[f]],preprocess='zscore',pseudo=0,cutoff=-Inf,max_dist=max_dist/bin_size)     # z-scores
@@ -1337,7 +1334,7 @@ op_loopdiff <- function(cmdline_args)
   if (full_matrix) { D = col(m[[1]])-row(m[[1]])
   } else { D = col(m[[1]])-1 }
   D = D*bin_size/1000
-  i_removed = ((m_scaled[[1]]<min_count)&(m_scaled[[2]]<min_count)) | ((m_norm[[1]]<min_zscore)&(m_norm[[2]]<min_zscore)) | (abs(D)<min_dist/1000)
+  i_removed = ((m_scaled[[1]]<min_count)&(m_scaled[[2]]<min_count)) | ((m_zscore[[1]]<min_zscore)&(m_zscore[[2]]<min_zscore)) | (abs(D)<min_dist/1000)
   if (sum(!i_removed)==0) { write("No interactions found!", stderr()); quit(save='no') }
   
   # create plots
@@ -1345,11 +1342,8 @@ op_loopdiff <- function(cmdline_args)
 
   # calculate log2 fold-changes
   if (opt$verbose) { write("Calculating log2 fold-changes...",stderr()); }
-  pseudo_scaled = min_count/2
-  pseudo_norm = 0.5
+  pseudo_scaled = min_count/10
   fold_scaled = log2((m_scaled[[2]]+pseudo_scaled)/(m_scaled[[1]]+pseudo_scaled))
-  fold_norm = log2((m_norm[[2]]+pseudo_norm)/(m_norm[[1]]+pseudo_norm))
-  diff_zscore = m_zscore[[2]]-m_zscore[[1]]
 
   # plot heatmaps and histogram
   if (opt$verbose) write("Creating plots...",stderr())
@@ -1361,24 +1355,10 @@ op_loopdiff <- function(cmdline_args)
   smoothScatter(log2(x),log2(y),xlab=sample_labels[1],ylab=sample_labels[2],main='Hi-C scaled counts')
   hist(fold_scaled[!i_removed],main='Histogram of log2 fold-changes',xlab='log2 fold-change',ylab='Frequency',n=20)
 
-  # distance-normalized scores
-  x = as.vector(m_norm[[1]][!i_removed])
-  y = as.vector(m_norm[[2]][!i_removed])
-  smoothScatter(log2(x),log2(y),xlab=sample_labels[1],ylab=sample_labels[2],main='Hi-C distance-normalized scores')
-  hist(fold_norm[!i_removed],main='Histogram of log2 fold-changes',xlab='log2 fold-change',ylab='Frequency',n=20)
-
-  # z-scores
-  x = as.vector(m_zscore[[1]][!i_removed])
-  y = as.vector(m_zscore[[2]][!i_removed])
-  smoothScatter(x,y,xlab=sample_labels[1],ylab=sample_labels[2],main='Hi-C distance-normalized z-scores')
-  hist(diff_zscore[!i_removed],main='Histogram of log2 fold-changes',xlab='log2 fold-change',ylab='Frequency',n=20)
-
   # heatmaps
   if (full_matrix) {
+    if (opt$verbose) { write("Plotting heatmaps...",stderr()); }
     n = nrow(m[[1]])
-    cc = 0
-    xpos = fold_scaled; xpos[xpos<=cc] = NA
-    xneg = -fold_scaled; xneg[xneg<=cc] = NA
     if (length(bins)>0) {
       i_sampled = max(1,min(bins)):min(n,max(bins))
       bin_points = (bins-min(bins))/(max(bins)-min(bins))
@@ -1388,47 +1368,63 @@ op_loopdiff <- function(cmdline_args)
       i_sampled = seq(1,n,length.out=200)
       bin_points = c()
     }
-#    image(max(xpos,na.rm=TRUE)-xpos[i_sampled,i_sampled],col='red',main='Hi-C gain')
-    image(xpos,col='red',main='Hi-C gain')
+    Z = (n-500):n
+    cc = 0.5
+    xpos = fold_scaled; xpos[xpos<=cc] = NA
+    xneg = -fold_scaled; xneg[xneg<=cc] = NA
+    image(xpos[Z,Z],col='red',main='Hi-C gain (fold-change)')
     for (pp in bin_points) draw.circle(pp,pp,0.01,col='green4',border='green4')
-#    image(max(xneg,na.rm=TRUE)-xneg[i_sampled,i_sampled],col='blue',main='Hi-C loss')
-    image(xneg,col='blue',main='Hi-C loss')
+    image(xneg[Z,Z],col='blue',main='Hi-C loss (fold-change)')
     for (pp in bin_points) draw.circle(pp,pp,0.01,col='green4',border='green4')
+    
+    par(mfrow=c(1,1),cex=0.75)
+    x = fold_scaled
+    xmax = max(abs(x),na.rm=TRUE)
+    xmin = -xmax
+    if (xmax>xmin) {
+      col_list = c('blue','red')
+      col_ramp = colorRampPalette(col_list)(10000)
+      col_levels = seq(from=xmin, to=xmax, length=length(col_ramp))
+      col_ramp2 = col_ramp[round(1+(min(x)-xmin)*length(col_ramp)/(xmax-xmin)) : round( (max(x)-xmin)*length(col_ramp)/(xmax-xmin) )]
+      x[(x>-cc)&(x<+cc)] = NA
+      image(x[Z,Z],main='Hi-C gain/loss (fold-change)',col=col_ramp)
+    }
   }
   
   # plot is done
   dev.off()
 
-  # Save fold changes in matrix format
-#  if (opt$verbose) { write("Storing results...",stderr()); }
-#  write.table(round(fold_scaled,4),quote=F,row.names=TRUE,col.names=full_matrix,sep='\t',file=paste(out_dir,'/matrix_scaled.tsv',sep=''))
-#  write.table(round(fold_norm,4),quote=F,row.names=TRUE,col.names=full_matrix,sep='\t',file=paste(out_dir,'/matrix_norm.tsv',sep=''))
-#  write.table(round(diff_zscore,4),quote=F,row.names=TRUE,col.names=full_matrix,sep='\t',file=paste(out_dir,'/matrix_zscore.tsv',sep=''))
+  if (opt$verbose) { write("Storing results...",stderr()); }
 
-  # Save fold changes in table format
-  if (full_matrix) {
-    labels = melt(fold_scaled)[!i_removed,1:2]
-  } else {
-    rnames = rownames(m[[1]])
-    N = length(rnames)
-    f <- function(pos) { i = (pos-1)%%N+1; j = (pos-1)%/%N+1; x = i-(j-1)%/%2; y = x+j-1; return(c(rnames[x],rnames[y])) }
-    labels = t(sapply(which(!i_removed),f))
-  }
-  table = cbind(labels,round(fold_scaled[!i_removed],3))
-  table = cbind(table,round(fold_norm[!i_removed],3))
-  table = cbind(table,round(diff_zscore[!i_removed],3))
-  for (z in c(m,m_scaled,m_norm,m_zscore)) table = cbind(table,round(z[!i_removed],3))
-  table = cbind(table,as.integer(1000*D[!i_removed]))
-  colnames(table) = c('locus1','locus2','log2-fold-scaled','log2-fold-norm','diff-zscore','sample1-raw','sample2-raw','sample1-scaled','sample2-scaled','sample1-norm','sample2-norm','sample1-zscore','sample2-zscore','distance')
-  # add symmetric interactions for distance-restricted matrix
-  if (full_matrix==FALSE) {  
-    table2 = table[,c(2,1,3:ncol(table))]
-    colnames(table2) = colnames(table)
-    table2[,'distance'] = -as.integer(table2[,'distance'])
-    table = rbind(table,table2)
-  }
-  write.table(table,file=paste(out_dir,'/table.tsv',sep=''),row.names=FALSE,col.names=TRUE,quote=FALSE,sep='\t')
+  if (opt$"table-output"==FALSE) {
+    # Save fold changes in matrix format
+    write.table(round(fold_scaled,4),quote=F,row.names=TRUE,col.names=full_matrix,sep='\t',file=paste(out_dir,'/matrix_scaled.tsv',sep=''))
   
+  } else {
+    # Save fold changes in table format
+    if (full_matrix) {
+      labels = melt(fold_scaled)[!i_removed,1:2]
+    } else {
+      rnames = rownames(m[[1]])
+      N = length(rnames)
+      f <- function(pos) { i = (pos-1)%%N+1; j = (pos-1)%/%N+1; x = i-(j-1)%/%2; y = x+j-1; return(c(rnames[x],rnames[y])) }
+      labels = t(sapply(which(!i_removed),f))
+    }
+    table = cbind(labels,round(fold_scaled[!i_removed],3))
+    for (z in c(m,m_scaled,m_zscore)) table = cbind(table,round(z[!i_removed],3))
+    table = cbind(table,as.integer(1000*D[!i_removed]))
+    colnames(table) = c('locus1','locus2','log2-fold-scaled','sample1-raw','sample2-raw','sample1-scaled','sample2-scaled','sample1-zscore','sample2-zscore','distance')
+   
+    # add symmetric interactions for distance-restricted matrix
+    if (full_matrix==FALSE) {  
+      table2 = table[,c(2,1,3:ncol(table))]
+      colnames(table2) = colnames(table)
+      table2[,'distance'] = -as.integer(table2[,'distance'])
+      table = rbind(table,table2)
+    }
+    write.table(table,file=paste(out_dir,'/table.tsv',sep=''),row.names=FALSE,col.names=TRUE,quote=FALSE,sep='\t')
+  }
+    
   # done
   if (opt$verbose) { write("Done.",stderr()); }
   quit(save='no')
@@ -2963,7 +2959,7 @@ if (length(args)<1) {
   cat('  domains      Identifies domains on input matrix (tsv) or estimated matrices (RData).\n');
   cat('  domain-cmp   Compares domain boundary scores.\n');
   cat('  loops        Identify loops (i.e. interactions).\n');
-  cat('  loop-diff    Computes fold-changes between corresponding elements of two matrices.\n');
+  cat('  diff         Computes fold-changes between corresponding elements of two matrices.\n');
   cat('\n');
   quit(save="no");
 }
@@ -3022,8 +3018,8 @@ if (op=="preprocess") {
   op_domain_cmp(args);
 } else if (op=="loops") {
   op_loops(args);
-} else if (op=="loop-diff") {
-  op_loopdiff(args);
+} else if (op=="diff") {
+  op_diff(args);
 } else {
   write(paste('Error: unknown operation "',op,'"!',sep=''),stderr());
 }
