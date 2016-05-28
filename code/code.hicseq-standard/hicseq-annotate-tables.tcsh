@@ -44,13 +44,13 @@ foreach l ($loci_reg)
 end
   
 # Annotate bins by loci of interest
-cat $out/loci.reg | gtools-overlaps overlap -i -label -t '|' $out/bin.reg | cut -f1 | sed 's/|/\t/' | tools-cols -t 1 0 | sort -u | tools-mergeuniq -merge -t , >! $out/bin.loci.tsv
+cat $out/loci.reg | gtools-overlaps overlap -i -label -t '|' $out/bin.reg | cut -f1 | sed 's/|/\t/' | tools-cols -t 1 0 | sort -u | tools-mergeuniq -merge -t , | join -t '	' -a1 -e N/A -o 1.1 2.2 $out/bin.reg - >! $out/bin.loci.tsv
 
 # Annotate bins by gene names
-gtools-regions reg $annot_reg | gtools-overlaps overlap -i -label -t '|' $out/bin.reg | cut -f1 | sed 's/|/\t/' | tools-cols -t 1 0 | sort -u | tools-mergeuniq -merge -t , >! $out/bin.gene.tsv
+gtools-regions reg $annot_reg | gtools-overlaps overlap -i -label -t '|' $out/bin.reg | cut -f1 | sed 's/|/\t/' | tools-cols -t 1 0 | sort -u | tools-mergeuniq -merge -t , | join -t '	' -a1 -e N/A -o 1.1 2.2 $out/bin.reg - >! $out/bin.gene.tsv
 
 # Join annotations into a single table
-join -t '	' -a1 -o 1.1 1.2 2.2 -e N/A $out/bin.gene.tsv $out/bin.loci.tsv | join -t '	' -a1 -e N/A -o 1.1 2.2 2.3 $out/bin.reg - >! $out/bin.annotated.tsv
+join -t '	' $out/bin.gene.tsv $out/bin.loci.tsv >! $out/bin.annotated.tsv
 
 # Collecting results
 scripts-send2err "Collecting results..."
