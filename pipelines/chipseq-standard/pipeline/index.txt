@@ -11,8 +11,5 @@ matrices
 
 pca
 
-heatmaps
-
-peakdiff
 diffbind
 
