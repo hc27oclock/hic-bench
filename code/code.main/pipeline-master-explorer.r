@@ -147,6 +147,7 @@ option_list <- list(
   make_option(c("-S","--sample-sheet"), default="inputs/sample-sheet.tsv", help="Sample sheet file name (required) [default \"%default\"]."),
   make_option(c("-F","--filter-branch"), default="", help="Regular expression for filtering input branches [default \"%default\"]."),
   make_option(c("--exclude-branch"), default="", help="Regular expression for excluding input branches [default \"%default\"]."),
+  make_option(c("--include-obj"), default="", help="Regular expression for including input objects [default \"%default\"]."),
   make_option(c("--exclude-obj"), default="", help="Regular expression for excluding input objects [default \"%default\"]."),
   make_option(c("--exclude-outdir"), default="", help="Regular expression for excluding output directories [default \"%default\"].")
 )
@@ -206,6 +207,7 @@ if (length(inp_db)==0) { obj_db = c()
   if (opt$verbose) write("Filtering input branches/objects...",stderr())
   selected = grep(opt$"filter-branch",inp_db$"inp-branch",ignore.case=TRUE)
   if (opt$"exclude-branch"!="") selected = intersect(selected, grep(opt$"exclude-branch",inp_db$"inp-branch",ignore.case=TRUE,invert=TRUE))
+  if (opt$"include-obj"!="") selected = intersect(selected, grep(opt$"include-obj",inp_db$"inp-object",ignore.case=TRUE,invert=FALSE))
   if (opt$"exclude-obj"!="") selected = intersect(selected, grep(opt$"exclude-obj",inp_db$"inp-object",ignore.case=TRUE,invert=TRUE))
   if (length(selected)>0) { obj_db = inp_db[selected,,drop=FALSE] } else { obj_db = c() }
 }
