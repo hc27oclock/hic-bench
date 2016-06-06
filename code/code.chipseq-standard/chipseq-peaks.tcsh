@@ -53,6 +53,8 @@ if ($gsize == "") then
   exit 1
 endif
 scripts-send2err "- genome = $genome"
+# display macs version
+macs2 --version
 echo macs2 callpeak -t $treatment_aln $control_aln --outdir=$outdir --name=macs $macs_params -g $gsize | scripts-send2err           # log info
 macs2 callpeak -t $treatment_aln $control_aln --outdir=$outdir --name=macs $macs_params -g $gsize
 
