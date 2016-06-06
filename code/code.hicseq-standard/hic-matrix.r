@@ -431,8 +431,6 @@ compare_matrices <- function(matrices1,matrices2,distances,method,prep='none',ve
     }
   }
     
-  write.table(C)
-  
   return(C)
 }
 
@@ -1789,7 +1787,7 @@ op_snapshots <- function(cmdline_args)
 
   
 
-###### ExtractEstimations
+###### ExtractEstimations   # NOTE: obsolete, covered by LoadEstimation; TODO: delete
 
 ExtractEstimations = function(filename, opt)
 { 
@@ -1842,6 +1840,7 @@ LoadEstimation = function(filename, options, replace.na)
     load(filename)  
     est$x = x
     est$y = y
+    est$opt = opt
     est$ignored_rows = sort(unique(ignored_rows))
     est$preprocess = opt$preprocess
     if (is.null(ignored_cols)) { est$ignored_cols = integer(0) } else { est$ignored_cols = sort(unique(ignored_cols)) }
@@ -2698,8 +2697,9 @@ op_compare <- function(cmdline_args)
   if (ext=="RData") {
     # compute and plot correlations
     if (opt$verbose) { write("Loading data...",stderr()); }
-    e1 = ExtractEstimations(f1,opt)
-    e2 = ExtractEstimations(f2,opt)
+    opt$preprocess = "none"
+    e1 = LoadEstimation(f1,opt,replace.na=FALSE)      # ExtractEstimations(f1,opt)
+    e2 = LoadEstimation(f2,opt,replace.na=FALSE)      # ExtractEstimations(f2,opt)
     if (prod(e1$lambdas==e2$lambdas)!=1) { write('Error: different lambda range in the two samples!',stderr()); quit(save='no'); }
     if (prod(e1$gammas==e2$gammas)!=1) { write('Error: different gamma range in the two samples!',stderr()); quit(save='no'); }
     if (nrow(e1$y)!=nrow(e2$y)) { write('Error: different matrix sizes in samples!',stderr()); quit(save='no'); }

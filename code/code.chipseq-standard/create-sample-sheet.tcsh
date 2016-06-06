@@ -42,7 +42,7 @@ foreach sample ($samples)
     endif
   endif
   if ("$fastq2" == "") set fastq2 = NA
-  if (($fraglen != "") || ($fraglen != "auto")) then
+  if (($fraglen != "") && ($fraglen != "auto")) then
     set frag = $fraglen
   else
     if (`echo $sample | tr '-' '\n' | grep -iEc '^H2AZ|^H[234]K[0-9]'` == 1) then

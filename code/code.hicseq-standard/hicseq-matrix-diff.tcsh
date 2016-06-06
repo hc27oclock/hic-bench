@@ -65,6 +65,7 @@ scripts-qsub-wait "$jid"
 # cleanup
 foreach outmatdir ($outmatdirs)
   mv $outdir/$outmatdir/matrix_scaled.tsv $outdir/$outmatdir.tsv
+  mv $outdir/$outmatdir/diff.pdf $outdir/$outmatdir.pdf
   rm -rf $outdir/$outmatdir
 end
 
