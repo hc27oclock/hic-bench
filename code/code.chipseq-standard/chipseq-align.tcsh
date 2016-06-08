@@ -116,12 +116,16 @@ echo "De-duplicated alignments\t$n_unique" >> $outdir/stats.tsv
 # create bigwig
 scripts-send2err "Creating bigwig file..."
 set chr_sizes = `scripts-create-temp`
+scripts-send2err "temp chr_sizes: $chr_sizes"
 set bedgraph = `scripts-create-temp`
-cat $genome_dir/genome.bed | awk '{print $1,$2,$3,$1}' | gtools-regions n >! $chr_sizes
+scripts-send2err "temp bedgraph: $bedgraph"
+# cat $genome_dir/genome.bed | awk '{print $1,$2,$3,$1}' | gtools-regions n >! $chr_sizes
+cat $genome_dir/bowtie2.index/genome.fa.fai | cut -f 1,2 | sort -k1,1 -k2,2n >! $chr_sizes
 set scale = `echo 1000000/$n_unique | bc -l`
-genomeCoverageBed -ibam $outdir/alignments.bam -scale $scale -bg -g $chr_sizes >! $bedgraph
+bedtools genomecov -ibam $outdir/alignments.bam -scale $scale -bg -g $chr_sizes | sort -k1,1 -k2,2n >! $bedgraph
 bedGraphToBigWig $bedgraph $chr_sizes $outdir/track.bw
 rm -f $chr_sizes $bedgraph
+
 
 # cleanup
 rm -f $outdir/alignments_sorted.bam
