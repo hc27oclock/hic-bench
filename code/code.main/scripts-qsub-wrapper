@@ -14,6 +14,7 @@ endif
 set resources = $1
 set prog = `which $2`
 set out = $3
+set jobname = `basename $3`
 shift
 shift
 
@@ -33,9 +34,9 @@ scripts-create-path $out/
 set pref = $out/job
 scripts-print-cmdline $prog $argv:q >! $pref.sh
 if ("$mem" == "") then
-  qsub -cwd $qsub_params -o :$pref.out -e :$pref.err -pe threaded $nthreads ./$pref.sh >! $pref.id
+  qsub -N $jobname -cwd $qsub_params -o :$pref.out -e :$pref.err -pe threaded $nthreads ./$pref.sh >! $pref.id
 else
-  qsub -cwd $qsub_params -l mem_free=$mem -l h_vmem=$mem -l mem_token=$mem -o :$pref.out -e :$pref.err -pe threaded $nthreads ./$pref.sh >! $pref.id
+  qsub -N $jobname -cwd $qsub_params -l mem_free=$mem -l h_vmem=$mem -l mem_token=$mem -o :$pref.out -e :$pref.err -pe threaded $nthreads ./$pref.sh >! $pref.id
 endif  
 cat $pref.id | cut -d' ' -f3                                                                 # TODO: is there a better method to obtain job id?
 
