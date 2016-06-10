@@ -87,6 +87,7 @@ Pipeline_Index<-scan(file=paste0(Pipeline_dir,"/index.txt"),what="", sep="\n",qu
 % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 % LaTeX settings start here:
 \geometry{paperwidth=140mm,paperheight=105mm} % larger page size than normal for larger plots and more flexibility with font sizes
+% ^^ use this to adjust the page dimensions
 %\documentclass[8pt,xcolor={dvipsnames}]{beamer}
 \setcounter{secnumdepth}{3} % how many levels deep before section headers stop getting numbers
 \setcounter{tocdepth}{3} % table of contents depth
@@ -110,9 +111,9 @@ Pipeline_Index<-scan(file=paste0(Pipeline_dir,"/index.txt"),what="", sep="\n",qu
 %
 % ~~~~~~ BEAMER SPECIFIC SETTINGS ~~~~~~~~ %
 \makeatletter % turn on the '@' command character; needs to come before beamer settings
-% \usetheme{Hannover} %  \usetheme{PaloAlto} % Bergen
-% \usetheme[left]{Marburg} %  width= % hideothersubsections
 \usetheme[left,hideothersubsections]{Marburg} %  width= % hideothersubsections
+% \usetheme[left,hideothersubsections,width=3cm]{Marburg} %  width= % hideothersubsections
+% ^^ use this to adjust the sidebar width and attributes
 % location installed themes and such: /usr/share/texmf/tex/latex/beamer
 \addtobeamertemplate{navigation symbols}{}{ % % this adds the page numbers at the bottom of the slide
     \usebeamerfont{footline}%
