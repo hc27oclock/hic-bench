@@ -1998,13 +1998,11 @@ IdentifyDomains = function(est, opt, full_matrix)
     kk = 1
     while (kk<=length(x_order)) {
       k = x_order[kk]
-      if (x[k]<alpha) break
+      if ((x[k]<=0)|(x[k]<alpha)) break
       minval_left = min(x[max(k-maxd,1):k],na.rm=TRUE)                                                                    # minimum value to the left of k
       minval_right = min(x[k:min(k+maxd,n)],na.rm=TRUE)                                                                   # minimum value to the right of k
       minpos_left = max(k-maxd,1) + min(which(x[max(k-maxd,1):k]<=minval_left)) - 1                                       # minimum left position
       minpos_right = k + max(which(x[k:min(k+maxd,n)]<=minval_right)) - 1                                                 # minimum value to the right of k
-      while ((minpos_left>1)&(!is.na(x[minpos_left]))&(x[minpos_left]<=minval_left)) minpos_left = minpos_left-1          # extend left position if lower (or equal) values are found
-      while ((minpos_right<n)&(!is.na(x[minpos_right]))&(x[minpos_right]<=minval_right)) minpos_right = minpos_right+1    # extend right position if lower (or equal) values are found
       for (j in minpos_left:minpos_right) if (y[j]==0) y[j] = -1                                                          # mask these bins from subsequent computations
       if (x[k]/max(x[minpos_left],x[minpos_right],na.rm=TRUE)>=1.1) y[k] = 1                                              # TODO: parametrize this?
       while ((kk<=length(x_order))&&(y[x_order[kk]]!=0)) kk = kk + 1                                                      # skip masked bins
@@ -2017,6 +2015,12 @@ IdentifyDomains = function(est, opt, full_matrix)
   
     #plot(x,type='l'); i=which(y==1); points(i,x[i],col='red',pch=18); j=which(y==-1); #points(j,x[j],col='blue',pch=18);  
     y[y==-1] = 0
+
+    # double-check if these are indeed local maxima
+    if (sum(y)>0) {
+      err = sum(sapply(which(y==1), function(i) max(x[max(1,i-1):min(i+1,length(y))],na.rm=TRUE)>x[i]))
+      if (err>0) { write("Error: there seem to exist non-local maxima in the list of identified boundaries!\n", stderr()); quit(save='no') }
+    }
 
     return(y)
   }
@@ -2050,8 +2054,7 @@ IdentifyDomains = function(est, opt, full_matrix)
     n_borders = 2*sum(ignored_rows[-1]-ignored_rows[-length(ignored_rows)]>1)        # borders: bins adjacent to ignored regions
     c_max = max(bscores,na.rm=TRUE)
     c_min = 0
-    cutoffs = unique(sort(bscores))
-    cutoffs = cutoffs[seq(1,length(cutoffs),by=5)]
+    cutoffs = unique( sort(bscores)[seq(length(bscores)%/%2,length(bscores),by=1)] )
     for (cutoff in cutoffs) {
       # find boundaries on observed input
       b = find_boundaries(bscores,opt,cutoff)
@@ -2114,8 +2117,9 @@ IdentifyDomains = function(est, opt, full_matrix)
     bscore_cutoff = calc_bscore_cutoff(dom$bscores[,k],opt,est$ignored_rows,n_iterations)
     
     # identify boundaries as local maxima of boundary scores
-    if (opt$verbose) write('Identifying domains at specified FDR...',stderr())
+    if (opt$verbose) write('Identifying domain boundaries at specified FDR...',stderr())
     dom$E[,k] = find_boundaries(dom$bscores[,k],opt,bscore_cutoff)
+    if (opt$verbose) write(paste('Identified ',sum(dom$E[,k]),' domain boundaries.',sep=''),stderr())
   }
   rownames(dom$bscores) = rownames(est$y)
   
@@ -2445,10 +2449,10 @@ local_maxima = function(x,tolerance,alpha,maxd)
 
 
 # ##########################
-#  OPERATION = BDIFF
+#  OPERATION = BDIFF [OLD-VERSION]
 # ##########################
 
-op_bdiff <- function(cmdline_args) 
+op_bdiff_old_version <- function(cmdline_args) 
 {
   # process command-line arguments
   option_list <- list(
@@ -2503,6 +2507,9 @@ op_bdiff <- function(cmdline_args)
 	  dom[[f]] = IdentifyDomains(est[[f]],opt,full_matrix)
 	}
 
+  # saving data
+  save(est,dom,file=paste(out_dir,'/data.RData',sep=''))
+  
   # repeat for every lambda!
   for (ll in 1:length(est[[1]]$lambdas)) {
 	  if (opt$verbose) write(paste('Processing lambda=',est[[1]]$lambdas[ll],'...',sep=''),stderr())
@@ -2574,6 +2581,173 @@ op_bdiff <- function(cmdline_args)
 		    }
 		  }
 		  dev.off();
+		}
+
+  }
+  		
+  # done
+  if (opt$verbose) { write("Done.",stderr()); }
+  quit(save='no')
+}
+
+
+
+
+
+# ##########################
+#  OPERATION = BDIFF
+# ##########################
+
+op_bdiff_new_version <- function(cmdline_args) 
+{
+  # process command-line arguments
+  option_list <- list(
+    make_option(c("-v","--verbose"), action="store_true",default=FALSE, help="Print more messages."),
+    make_option(c("-o","--output-dir"), default="", help="Output directory (required) [default \"%default\"]."),
+    make_option(c("--row-labels"), action="store_true",default=FALSE, help="Input matrix has row labels"),
+    make_option(c("--min-lambda"), default=0.0, help="Minimum value for parameter lambda (only applicable if estimated max-lambda was set to Inf) [default=%default]."),
+    make_option(c("--max-lambda"), default=1.0, help="Maximum value for parameter lambda (only applicable if estimated max-lambda was set to Inf) [default=%default]."),
+    make_option(c("--n-lambda"), default=2, help="Number of lambdas (only applicable if estimated max-lambda was set to Inf) [default=%default]."),
+    make_option(c("--log2-lambda"), action="store_true",default=FALSE, help="Use log2 scale for lambda range (only applicable if estimated max-lambda was set to Inf)."),
+    make_option(c("--gamma"), default=0.0, help="Value for sparsity parameter gamma (only applicable if estimated max-lambda was set to Inf) [default=%default]."),
+    make_option(c("--ignored-loci"), default="", help="Ignored row and column names found in this list (not required) [default=\"%default\"]."),
+    make_option(c("--preprocess"), default="none", help="Matrix preprocessing: none (default), max, mean, log2, log2mean, rank, dist, distlog2."),
+    make_option(c("--method"), default="ratio", help="Boundary score method: ratio, diffratio, intra-max, intra-min, intra-right, intra-left, inter, diff, DI [default \"%default\"]."),
+    make_option(c("--distance"), default=5, help="Distance from diagonal (in number of bins) used for boundary score computation [default \"%default\"]."),
+    make_option(c("--distance2"), default=0, help="Distance from diagonal (in number of bins) used for boundary score computation [default \"%default\"]."),
+    make_option(c("--skip-distance"), default=1, help="Distance from diagonal (in number of bins) to be skipped [default \"%default\"]."),
+    make_option(c("--tolerance"), default=0.01, help="Percent difference cutoff for merging local maxima [default \"%default\"]."),
+    make_option(c("--fdr"), default=1.0, help="False discovery rate cutoff [default \"%default\"]."),
+    make_option(c("--zcutoff"), default=1.0, help="Minimum z-score cutoff for calling differential boundaries [default \"%default\"]."),
+    make_option(c("--flank-dist"), default=10, help="Local maxima neighborhood radius (in number of bins) [default \"%default\"]."),
+    make_option(c("--track-dist"), default=10, help="Maximum distance (number of bins) from diagonal for track generation  [default=%default]."),
+    make_option(c("--bins"), default="", help="Comma-separated bins to be highlighted [default \"%default\"].")
+  )
+  usage = 'hic-matrix.r bdiff [OPTIONS] MATRIX-FILES(tsv/RData)'
+  
+  # get command line options (if help option encountered print help and exit)
+  arguments <- parse_args(args=cmdline_args, OptionParser(usage=usage,option_list=option_list), positional_arguments=c(0,Inf));
+  opt <- arguments$options;
+  if (opt$verbose) print_options(opt)
+  files <- arguments$args;
+  if (length(files)<1) { write(paste('Usage:',usage),stderr()); quit(save='no'); }
+
+  # input arguments
+  out_dir <- opt$'output-dir'
+  bins = as.integer(strsplit(opt$'bins',',')[[1]])
+  if (length(bins)==0) { bin_points = c() } else { bin_points = (bins-min(bins))/(max(bins)-min(bins)) }
+  
+  # create output directory
+  if (out_dir=="") { write('Error: please specify output directory!',stderr()); quit(save='no') }
+  if (file.exists(out_dir)==FALSE) { dir.create(out_dir) } else { write('Error: output directory already exists!',stderr()); quit(save='no') }
+
+	# loading matrix data & identify domains
+#if (FALSE) {
+	est = {}
+	dom = {}
+	for (f in 1:length(files)) { 
+    if (opt$verbose) write(paste('Loading input matrix ',files[f],'...',sep=''),stderr())
+	  est[[f]] = LoadEstimation(files[[f]],opt,replace.na=TRUE)
+	  if (is.null(est[[f]]$lambdas)==TRUE) { write("Error: maximum lambda cannot be infinite, use the 'extract' operation to select specific lambdas.",stderr()); quit(save='no') }
+	  if (opt$verbose) write("Computing boundary scores...",stderr())
+	  full_matrix = is_full_matrix(est[[f]]$y)
+	  dom[[f]] = IdentifyDomains(est[[f]],opt,full_matrix)
+	}
+
+  # saving data
+#  save(files,opt,est,dom,file=paste(out_dir,'/data.RData',sep=''))
+#} else {
+#  load('data.RData')
+#}
+
+  # repeat for every lambda!
+  for (ll in 1:length(est[[1]]$lambdas)) {
+	  if (opt$verbose) write(paste('Processing lambda=',est[[1]]$lambdas[ll],'...',sep=''),stderr())
+  
+		# obtaining boundary scores
+    scores = {}                                          # all boundary scores
+    bscores = {}                                         # boundary scores for selected method
+    lmax = {}                                            # local maxima for each sample
+    for (f in 1:length(files)) { 
+      scores[[f]] = dom[[f]]$scores[[ll]]                # all boundary scores
+		  bscores[[f]] = dom[[f]]$scores[[ll]][,opt$method]  # boundary score to be used
+      lmax[[f]] = dom[[f]]$E[,ll]
+    }
+
+    # identified boundaries in at least one sample
+    boundaries = lmax[[1]] | lmax[[2]]
+
+		# process data
+		if (opt$verbose) write("Identifying boundary changes (using new method)...",stderr())
+    zscores = {}                                         # scores converted to z-scores
+    b = {}                                               # classification of boundaries using intra-left, inter, intra-right
+    zcutoff = opt$zcutoff
+    fclass = function(z) if (z > zcutoff) { return('H') } else if (z < -zcutoff) { return('L') } else { return('M') }
+    for (f in 1:length(files)) { 
+      zscores[[f]] = apply(scores[[f]], 2, function(x) (x-mean(x[boundaries],na.rm=T))/sd(x[boundaries],na.rm=T))
+      b[[f]] = apply(cbind(sapply(zscores[[f]][,'intra-left'],fclass), sapply(zscores[[f]][,'inter'],fclass), sapply(zscores[[f]][,'intra-right'],fclass)), 1, paste, collapse='')
+    }
+    bdiff = which( boundaries & (zscores[[1]][,'intra-max']>zcutoff) & (zscores[[2]][,'intra-max']>zcutoff) & (abs(zscores[[1]][,'inter']-zscores[[2]][,'inter'])>zcutoff) )
+		if (opt$verbose) write(paste('TAD changes = ',length(bdiff),sep=''),stderr())
+
+		# storing results
+		if (opt$verbose) { write("Storing results...",stderr()); }
+    table = cbind(names(b[[1]]),lmax[[1]],lmax[[2]],b[[1]],b[[2]])
+		colnames(table) = c('locus','sample1-boundary','sample2-boundary','sample1-code','sample2-code')
+    for (m in c('intra-left','intra-right','inter',opt$method)) {
+      table = cbind(table,round(zscores[[1]][,m],3),round(zscores[[2]][,m],3))
+      colnames(table)[(ncol(table)-1):ncol(table)] = c(paste('sample1-',m,'-zscore',sep=''),paste('sample2-',m,'-zscore',sep=''))
+    }
+    table = table[bdiff,,drop=FALSE]
+		write.table(table,col.names=T,row.names=F,quote=F,sep='\t',file=paste(out_dir,'/table.k=',formatC(ll,width=3,format='d',flag='0'),'.tsv',sep=''))
+		
+		# generate snapshots
+		if (length(bdiff)!=0) {
+		  if (opt$verbose) write("Generating snapshots...",stderr())
+		  pdf(paste(out_dir,'/diff.k=',formatC(ll,width=3,format='d',flag='0'),'.pdf',sep=''),height=9,width=18)
+		  par(mfcol=c(6,2),mar=c(0.5,0.5,0.5,0.5))
+		  flank = 2.5*opt$'track-dist'
+		  s0min = min(sapply(bscores,min,na.rm=TRUE))
+		  s0max = max(sapply(bscores,max,na.rm=TRUE))
+		  zlim = {}
+		  pseudo = 0.1
+		  for (f in 1:length(files)) {
+		    zlim[[f]] = max(est[[f]]$solObj[ll,,])
+		    if (opt$preprocess=='none') zlim[[f]] = log2(zlim[[f]]+pseudo)
+		  }
+		  for (j in bdiff) if ((j>flank)&(j<=length(boundaries)-flank)) {
+		    if (opt$verbose) write(paste(j,lmax[[1]][j],lmax[[2]][j]),stderr())
+		    I = (j-flank):(j+flank)
+		    # snapshots for each sample
+		    mat = {}
+		    for (f in 1:length(files)) {
+		      full_matrix = is_full_matrix(est[[f]]$y)
+		      if (full_matrix) { mat[[f]] = MatrixRotate45(est[[f]]$solObj[ll,I,I],opt$'track-dist')
+		      } else { mat = est[[f]]$solObj[ll,I,1:min(ncol(est[[f]]$y),opt$'track-dist')] }
+		      if (opt$preprocess=='none') mat[[f]] = log2(mat[[f]]+pseudo) 
+		      mat[[f]] = mat[[f]]/zlim[[f]]
+		      image(mat[[f]],xaxt='n',yaxt='n',zlim=c(0,1))
+		      s = as.vector(bscores[[f]][I])
+		      lines(seq(0,1,length.out=length(s)),(s-min(s))/(max(s)-min(s)),col='blue')
+		      enorm = which(lmax[[f]][I]==1)/length(I)
+		      abline(v=(which(lmax[[f]][I]==1)-1)/(length(I)-1),col='blue')
+		      d = 1/length(I)
+		      pp = 0.5
+		      rect(pp-d,0,pp+d,0.04,col='purple',border='purple')
+		    }
+		    # snapshop of sample2-vs-sample1 differences
+        x = mat[[2]] - mat[[1]]
+        xmax = max(abs(x),na.rm=TRUE)
+        xmin = -xmax
+        xcc = 0
+        col_list = c('blue','red')
+        col_ramp = colorRampPalette(col_list)(10000)
+        col_levels = seq(from=xmin, to=xmax, length=length(col_ramp))
+        col_ramp2 = col_ramp[round(1+(min(x)-xmin)*length(col_ramp)/(xmax-xmin)) : round( (max(x)-xmin)*length(col_ramp)/(xmax-xmin) )]
+        #x[(x>-xcc)&(x<+xcc)] = NA
+        image(x,xaxt='n',yaxt='n',col=col_ramp,zlim=c(-0.5,+0.5))
+		  }
+		  dev.off()
 		}
 
   }
@@ -3011,7 +3185,7 @@ if (op=="preprocess") {
 } else if (op=="bscores") {
   op_bscores(args);
 } else if (op=="bdiff") {
-  op_bdiff(args);
+  op_bdiff_new_version(args);
 } else if (op=="domains") {
   op_domains(args);
 } else if (op=="domain-cmp") {
