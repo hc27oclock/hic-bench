@@ -19,8 +19,7 @@ tmp_file="$1"
 # if 'module' commands work, then load correct R version
 if module unload r; then
   echo -e "Loading R module"
-  module unload r
-  module load r/3.2.3
+  module switch r/3.3.0
   echo -e "Rscript version is:"
   $(Rscript --version)
 else
