@@ -6,6 +6,7 @@
 ## This script will compile a .Rnw document with knitr in R, then compile the results .tex file with pdflatex
 ##
 
+# check script args
 if [ $# != 1 ] # if not enough args provided
 then
   echo -e "Only one argument is supported for this script at this time" # update this in this in the future, use like '$@' in a for loop
@@ -29,6 +30,7 @@ else
 fi
 
 # compile the document with knitr
+# you must have knitr installed already !!
 # in the future update to make sure that the arg passed was a file that ends in .Rnw
 Rscript --slave --no-save --no-restore - "$1" <<EOF
   ## R code
@@ -69,7 +71,7 @@ EOF
 
 # PDF compilation with pdflatex
 # check if the .tex file exists; 
-# watch out, sometimes knitr can fail but still produce a tex file
+# # sometimes knitr can fail but still produce a tex file
 if [ -f ${tmp_file%%.Rnw}.tex ]; then
   # check if pdflatex is installed
   if command -v pdflatex &>/dev/null; then
