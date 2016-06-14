@@ -2618,7 +2618,8 @@ op_bdiff_new_version <- function(cmdline_args)
     make_option(c("--skip-distance"), default=1, help="Distance from diagonal (in number of bins) to be skipped [default \"%default\"]."),
     make_option(c("--tolerance"), default=0.01, help="Percent difference cutoff for merging local maxima [default \"%default\"]."),
     make_option(c("--fdr"), default=1.0, help="False discovery rate cutoff [default \"%default\"]."),
-    make_option(c("--zcutoff"), default=1.0, help="Minimum z-score cutoff for calling differential boundaries [default \"%default\"]."),
+    make_option(c("--pcutoff"), default=0.10, help="Minimum rank percentile change for calling differential boundaries [default \"%default\"]."),
+    make_option(c("--zcutoff"), default=1.0, help="Minimum z-score cutoff for calling activated domains [default \"%default\"]."),
     make_option(c("--flank-dist"), default=10, help="Local maxima neighborhood radius (in number of bins) [default \"%default\"]."),
     make_option(c("--track-dist"), default=10, help="Maximum distance (number of bins) from diagonal for track generation  [default=%default]."),
     make_option(c("--bins"), default="", help="Comma-separated bins to be highlighted [default \"%default\"].")
@@ -2642,23 +2643,25 @@ op_bdiff_new_version <- function(cmdline_args)
   if (file.exists(out_dir)==FALSE) { dir.create(out_dir) } else { write('Error: output directory already exists!',stderr()); quit(save='no') }
 
 	# loading matrix data & identify domains
-#if (FALSE) {
-	est = {}
-	dom = {}
-	for (f in 1:length(files)) { 
-    if (opt$verbose) write(paste('Loading input matrix ',files[f],'...',sep=''),stderr())
-	  est[[f]] = LoadEstimation(files[[f]],opt,replace.na=TRUE)
-	  if (is.null(est[[f]]$lambdas)==TRUE) { write("Error: maximum lambda cannot be infinite, use the 'extract' operation to select specific lambdas.",stderr()); quit(save='no') }
-	  if (opt$verbose) write("Computing boundary scores...",stderr())
-	  full_matrix = is_full_matrix(est[[f]]$y)
-	  dom[[f]] = IdentifyDomains(est[[f]],opt,full_matrix)
-	}
-
-  # saving data
-#  save(files,opt,est,dom,file=paste(out_dir,'/data.RData',sep=''))
-#} else {
-#  load('data.RData')
-#}
+	recompute_domains = FALSE
+  if (recompute_domains==TRUE) {
+	  est = {}
+  	dom = {}
+  	for (f in 1:length(files)) { 
+      if (opt$verbose) write(paste('Loading input matrix ',files[f],'...',sep=''),stderr())
+	    est[[f]] = LoadEstimation(files[[f]],opt,replace.na=TRUE)
+	    if (is.null(est[[f]]$lambdas)==TRUE) { write("Error: maximum lambda cannot be infinite, use the 'extract' operation to select specific lambdas.",stderr()); quit(save='no') }
+	    if (opt$verbose) write("Computing boundary scores...",stderr())
+	    full_matrix = is_full_matrix(est[[f]]$y)
+	    dom[[f]] = IdentifyDomains(est[[f]],opt,full_matrix)
+  	}
+    # save data
+    save(files,opt,est,dom,file=paste(out_dir,'/data.RData',sep=''))
+  } else {
+    opt1 = opt
+    load('data.RData')       # TODO: use input args to obtain this
+    opt = opt1
+  }
 
   # repeat for every lambda!
   for (ll in 1:length(est[[1]]$lambdas)) {
@@ -2680,21 +2683,23 @@ op_bdiff_new_version <- function(cmdline_args)
 		# process data
 		if (opt$verbose) write("Identifying boundary changes (using new method)...",stderr())
     zscores = {}                                         # scores converted to z-scores
-    b = {}                                               # classification of boundaries using intra-left, inter, intra-right
+    pscores = {}                                         # scores converted to percentiles
     zcutoff = opt$zcutoff
-    fclass = function(z) if (z > zcutoff) { return('H') } else if (z < -zcutoff) { return('L') } else { return('M') }
+    pcutoff = opt$pcutoff
     for (f in 1:length(files)) { 
       zscores[[f]] = apply(scores[[f]], 2, function(x) (x-mean(x[boundaries],na.rm=T))/sd(x[boundaries],na.rm=T))
-      b[[f]] = apply(cbind(sapply(zscores[[f]][,'intra-left'],fclass), sapply(zscores[[f]][,'inter'],fclass), sapply(zscores[[f]][,'intra-right'],fclass)), 1, paste, collapse='')
+      pscores[[f]] = apply(scores[[f]], 2, function(x) rank(x,na.last=TRUE,ties.method="average")/length(x))
     }
-    bdiff = which( boundaries & (zscores[[1]][,'intra-max']>zcutoff) & (zscores[[2]][,'intra-max']>zcutoff) & (abs(zscores[[1]][,'inter']-zscores[[2]][,'inter'])>zcutoff) )
+    bdiff = which( boundaries & (zscores[[1]][,'intra-max']>zcutoff) & (zscores[[2]][,'intra-max']>zcutoff) & (abs(pscores[[1]][,'inter']-pscores[[2]][,'inter'])>pcutoff) )
 		if (opt$verbose) write(paste('TAD changes = ',length(bdiff),sep=''),stderr())
 
 		# storing results
 		if (opt$verbose) { write("Storing results...",stderr()); }
-    table = cbind(names(b[[1]]),lmax[[1]],lmax[[2]],b[[1]],b[[2]])
-		colnames(table) = c('locus','sample1-boundary','sample2-boundary','sample1-code','sample2-code')
+    table = cbind(names(lmax[[1]]),lmax[[1]],lmax[[2]])
+		colnames(table) = c('locus','sample1-boundary','sample2-boundary')
     for (m in c('intra-left','intra-right','inter',opt$method)) {
+      table = cbind(table,round(pscores[[1]][,m],3),round(pscores[[2]][,m],3))
+      colnames(table)[(ncol(table)-1):ncol(table)] = c(paste('sample1-',m,'-pscore',sep=''),paste('sample2-',m,'-pscore',sep=''))
       table = cbind(table,round(zscores[[1]][,m],3),round(zscores[[2]][,m],3))
       colnames(table)[(ncol(table)-1):ncol(table)] = c(paste('sample1-',m,'-zscore',sep=''),paste('sample2-',m,'-zscore',sep=''))
     }
