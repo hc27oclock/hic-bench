@@ -13,7 +13,8 @@ set diff_domains_params = ( \
 --flank-dist=`echo 500000/$bin_size | bc` \
 --tolerance=0.01 \
 --fdr=0.01 \
---zcutoff=1.0 \
+--z1=1.0 \
+--z2=0.5 \
 --track-dist=`echo 2000000/$bin_size | bc` \
 )
 

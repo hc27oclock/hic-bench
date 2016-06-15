@@ -2618,8 +2618,8 @@ op_bdiff_new_version <- function(cmdline_args)
     make_option(c("--skip-distance"), default=1, help="Distance from diagonal (in number of bins) to be skipped [default \"%default\"]."),
     make_option(c("--tolerance"), default=0.01, help="Percent difference cutoff for merging local maxima [default \"%default\"]."),
     make_option(c("--fdr"), default=1.0, help="False discovery rate cutoff [default \"%default\"]."),
-    make_option(c("--pcutoff"), default=0.10, help="Minimum rank percentile change for calling differential boundaries [default \"%default\"]."),
-    make_option(c("--zcutoff"), default=1.0, help="Minimum z-score cutoff for calling activated domains [default \"%default\"]."),
+    make_option(c("--z1"), default=1.0, help="Minimum z-score cutoff for calling activated domains [default \"%default\"]."),
+    make_option(c("--z2"), default=0.5, help="Minimum z-score change for calling differential boundaries [default \"%default\"]."),
     make_option(c("--flank-dist"), default=10, help="Local maxima neighborhood radius (in number of bins) [default \"%default\"]."),
     make_option(c("--track-dist"), default=10, help="Maximum distance (number of bins) from diagonal for track generation  [default=%default]."),
     make_option(c("--bins"), default="", help="Comma-separated bins to be highlighted [default \"%default\"].")
@@ -2683,23 +2683,21 @@ op_bdiff_new_version <- function(cmdline_args)
 		# process data
 		if (opt$verbose) write("Identifying boundary changes (using new method)...",stderr())
     zscores = {}                                         # scores converted to z-scores
-    pscores = {}                                         # scores converted to percentiles
-    zcutoff = opt$zcutoff
-    pcutoff = opt$pcutoff
+#    pscores = {}                                         # scores converted to percentiles
     for (f in 1:length(files)) { 
       zscores[[f]] = apply(scores[[f]], 2, function(x) (x-mean(x[boundaries],na.rm=T))/sd(x[boundaries],na.rm=T))
-      pscores[[f]] = apply(scores[[f]], 2, function(x) rank(x,na.last=TRUE,ties.method="average")/length(x))
+#      pscores[[f]] = apply(scores[[f]], 2, function(x) rank(x,na.last=TRUE,ties.method="average")/length(x))
     }
-    bdiff = which( boundaries & (zscores[[1]][,'intra-max']>zcutoff) & (zscores[[2]][,'intra-max']>zcutoff) & (abs(pscores[[1]][,'inter']-pscores[[2]][,'inter'])>pcutoff) )
+    bdiff = which( boundaries & (zscores[[1]][,'intra-max']>=opt$z1) & (zscores[[2]][,'intra-max']>=opt$z1) & (abs(zscores[[1]][,opt$method]-zscores[[2]][,opt$method])>=opt$z2) )
 		if (opt$verbose) write(paste('TAD changes = ',length(bdiff),sep=''),stderr())
 
 		# storing results
 		if (opt$verbose) { write("Storing results...",stderr()); }
     table = cbind(names(lmax[[1]]),lmax[[1]],lmax[[2]])
 		colnames(table) = c('locus','sample1-boundary','sample2-boundary')
-    for (m in c('intra-left','intra-right','inter',opt$method)) {
-      table = cbind(table,round(pscores[[1]][,m],3),round(pscores[[2]][,m],3))
-      colnames(table)[(ncol(table)-1):ncol(table)] = c(paste('sample1-',m,'-pscore',sep=''),paste('sample2-',m,'-pscore',sep=''))
+    for (m in c('intra-left','intra-right',opt$method)) {
+#      table = cbind(table,round(pscores[[1]][,m],3),round(pscores[[2]][,m],3))
+#      colnames(table)[(ncol(table)-1):ncol(table)] = c(paste('sample1-',m,'-pscore',sep=''),paste('sample2-',m,'-pscore',sep=''))
       table = cbind(table,round(zscores[[1]][,m],3),round(zscores[[2]][,m],3))
       colnames(table)[(ncol(table)-1):ncol(table)] = c(paste('sample1-',m,'-zscore',sep=''),paste('sample2-',m,'-zscore',sep=''))
     }
@@ -2732,8 +2730,8 @@ op_bdiff_new_version <- function(cmdline_args)
 		      if (opt$preprocess=='none') mat[[f]] = log2(mat[[f]]+pseudo) 
 		      mat[[f]] = mat[[f]]/zlim[[f]]
 		      image(mat[[f]],xaxt='n',yaxt='n',zlim=c(0,1))
-		      s = as.vector(bscores[[f]][I])
-		      lines(seq(0,1,length.out=length(s)),(s-min(s))/(max(s)-min(s)),col='blue')
+		      s = as.vector(bscores[[f]])
+		      lines(seq(0,1,length.out=length(s[I])),(s[I]-min(s))/(max(s)-min(s)),col='blue')
 		      enorm = which(lmax[[f]][I]==1)/length(I)
 		      abline(v=(which(lmax[[f]][I]==1)-1)/(length(I)-1),col='blue')
 		      d = 1/length(I)
