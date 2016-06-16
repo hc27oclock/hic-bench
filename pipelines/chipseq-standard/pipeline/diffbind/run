@@ -6,8 +6,8 @@ source ./code/code.main/custom-tcshrc      # customize shell environment
 ##
 
 #TITLE: DiffBind
-#DESCRIPTION: 
-#FIGURE: 
+#DESCRIPTION: This step runs differential binding analysis on the peaks
+#FIGURE: plot.heatmap.fpkm.pdf plot.pca.fpkm.pdf
 #SHEET: 
 
 # process command-line inputs
