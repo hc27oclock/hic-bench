@@ -42,7 +42,7 @@ set fastq_cols = `echo $fastq_cols | tr ' ' ','`
 set files = `cat $sheet | sed '1d'  | cut -f$fastq_cols | tr ',\t' '\n' | sort -u | grep -v '^NA$'`
 foreach f ($files)
   if (! -e inputs/fastq/$f) then
-    scripts-send2err "Error: file \'$f\' not found in inputs/fastq-or-alignments directory."
+    scripts-send2err "Error: file \'$f\' not found in inputs/fastq directory."
     exit 1
   endif
 end
