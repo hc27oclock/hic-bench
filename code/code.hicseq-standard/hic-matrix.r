@@ -2018,8 +2018,8 @@ IdentifyDomains = function(est, opt, full_matrix)
 
     # double-check if these are indeed local maxima
     if (sum(y)>0) {
-      err = sum(sapply(which(y==1), function(i) max(x[max(1,i-1):min(i+1,length(y))],na.rm=TRUE)>x[i]))
-      if (err>0) { write("Error: there seem to exist non-local maxima in the list of identified boundaries!\n", stderr()); quit(save='no') }
+      err = sapply(which(y==1), function(i) max(x[max(1,i-1):min(i+1,length(y))],na.rm=TRUE)>x[i])
+      if (sum(err)>0) { write(paste("Warning: there seem to exist non-local maxima in the list of identified boundaries [",which(err),"]\n"), stderr()) }   #; quit(save='no') }
     }
 
     return(y)
@@ -2643,7 +2643,7 @@ op_bdiff_new_version <- function(cmdline_args)
   if (file.exists(out_dir)==FALSE) { dir.create(out_dir) } else { write('Error: output directory already exists!',stderr()); quit(save='no') }
 
 	# loading matrix data & identify domains
-	recompute_domains = TRUE
+	recompute_domains = FALSE
   if (recompute_domains==TRUE) {
 	  est = {}
   	dom = {}
@@ -2710,8 +2710,8 @@ op_bdiff_new_version <- function(cmdline_args)
 		  pdf(paste(out_dir,'/diff.k=',formatC(ll,width=3,format='d',flag='0'),'.pdf',sep=''),height=9,width=18)
 		  par(mfcol=c(6,2),mar=c(0.5,0.5,0.5,0.5))
 		  flank = 2.5*opt$'track-dist'
-		  s0min = min(sapply(bscores,min,na.rm=TRUE))
-		  s0max = max(sapply(bscores,max,na.rm=TRUE))
+		  smin = min(sapply(bscores,min,na.rm=TRUE))
+		  smax = max(sapply(bscores,max,na.rm=TRUE))
 		  zlim = {}
 		  pseudo = 0.1
 		  for (f in 1:length(files)) {
@@ -2726,12 +2726,13 @@ op_bdiff_new_version <- function(cmdline_args)
 		    for (f in 1:length(files)) {
 		      full_matrix = is_full_matrix(est[[f]]$y)
 		      if (full_matrix) { mat[[f]] = MatrixRotate45(est[[f]]$solObj[ll,I,I],opt$'track-dist')
-		      } else { mat = est[[f]]$solObj[ll,I,1:min(ncol(est[[f]]$y),opt$'track-dist')] }
+		      } else { mat[[f]] = est[[f]]$solObj[ll,I,1:min(ncol(est[[f]]$y),opt$'track-dist')] }
 		      if (opt$preprocess=='none') mat[[f]] = log2(mat[[f]]+pseudo) 
 		      mat[[f]] = mat[[f]]/zlim[[f]]
 		      image(mat[[f]],xaxt='n',yaxt='n',zlim=c(0,1))
 		      s = as.vector(bscores[[f]])
-		      lines(seq(0,1,length.out=length(s[I])),(s[I]-min(s))/(max(s)-min(s)),col='blue')
+		      s = (s-smin)/(smax-smin)
+		      lines(seq(0,1,length.out=length(s[I])),s[I],col='blue')
 		      enorm = which(lmax[[f]][I]==1)/length(I)
 		      abline(v=(which(lmax[[f]][I]==1)-1)/(length(I)-1),col='blue')
 		      d = 1/length(I)
