@@ -2018,8 +2018,11 @@ IdentifyDomains = function(est, opt, full_matrix)
 
     # double-check if these are indeed local maxima
     if (sum(y)>0) {
-      err = sapply(which(y==1), function(i) max(x[max(1,i-1):min(i+1,length(y))],na.rm=TRUE)>x[i])
-      if (sum(err)>0) { write(paste("Warning: there seem to exist non-local maxima in the list of identified boundaries [",which(err),"]\n"), stderr()) }   #; quit(save='no') }
+      err = sapply(which(y==1), function(i) { ii=max(1,i-1):min(i+1,length(y)); v = x[ii]; is_err = (sum(is.na(v))==0)&(max(v,na.rm=TRUE)>x[i]); if (is_err) write(paste("v=[",paste(v,collapse=' '),"] x=",x[i],sep=""),stderr()); return(is_err) })
+      if (sum(err)>0) { 
+        write(paste("Warning: there seem to exist non-local maxima in the list of identified boundaries [",which(err),"]\n"), stderr())
+        quit(save='no') 
+      }
     }
 
     return(y)
