@@ -2643,7 +2643,7 @@ op_bdiff_new_version <- function(cmdline_args)
   if (file.exists(out_dir)==FALSE) { dir.create(out_dir) } else { write('Error: output directory already exists!',stderr()); quit(save='no') }
 
 	# loading matrix data & identify domains
-	recompute_domains = FALSE
+	recompute_domains = TRUE
   if (recompute_domains==TRUE) {
 	  est = {}
   	dom = {}
