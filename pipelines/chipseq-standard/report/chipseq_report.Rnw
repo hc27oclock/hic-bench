@@ -342,7 +342,7 @@ for(i in seq_along(tmpdf)){
 # print the default pipeline params into the document
 DefaultInputParams_filepath<-paste(getwd(),"pipeline", "inputs", "params","params.tcsh", sep="/")
 DefaultInputParams<-scan(file = DefaultInputParams_filepath,character(0), sep = "\n")
-     cat("\\begin{frame}{", latexTranslate("Default Pipeline Parameters"), " Parameters}\n", sep="")
+     cat("\\begin{frame}{", latexTranslate("Default Pipeline Parameters"), " }\n", sep="")
      cat("\\scriptsize{",cat(latexTranslate(DefaultInputParams),sep = "\n\n"),"}\n",sep = "")
      cat("\\end{frame}\n\n")
 
