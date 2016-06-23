@@ -1924,47 +1924,6 @@ LoadEstimation = function(filename, options, replace.na)
 
 
 
-###### IdentifyDomainsOld
-
-IdentifyDomainsOld = function(est, opt, full_matrix)
-{
-  n_matrices = dim(est$solObj)[1]
-  n_rows = nrow(est$y)
-  n_cols = ncol(est$y)
-  dom = {}
-  dom$scores = {}                              # boundary scores: all methods
-  dom$bscores = matrix(0,n_rows,n_matrices)    # "normalized" boundary scores, only selected method
-  dom$E = array(0,dim=c(n_rows,n_matrices))
-  rownames(dom$E) = rownames(est$y)
-  for (k in 1:n_matrices) {
-    if (opt$verbose) write(paste('-- matrix #',k,'...',sep=''),stderr())
-
-    # compute boundary scores
-    if (full_matrix) {
-      z = est$solObj[k,,]
-      rownames(z) = rownames(est$y)
-      colnames(z) = colnames(est$y)
-    } else {
-      if (opt$verbose) write('Inverse-rotating input matrices...',stderr())
-      z = MatrixInverseRotate45(est$solObj[k,,])
-      rownames(z) = colnames(z) = rownames(est$y)
-    }
-    dom$scores[[k]] = MatrixBoundaryScores(z,distance=opt$distance,d2=opt$distance2,skip=opt$'skip-distance')       # non-normalized boundary scores, all methods
-    dom$scores[[k]][est$ignored_rows,] = NA                                                                         # ignored rows have no score (i.e. NA)
-    if (opt$method=='inter') dom$bscores[,k] = max(dom$bscores[,k],na.rm=TRUE)-dom$bscores[,k]                      # reverse inter score         # TODO: shouldn't this go below the next line??
-    dom$bscores[,k] = local_maxima_score(dom$scores[[k]][,opt$method],maxd=opt$'flank-dist',scale=FALSE)            # local normalization (no scaling to [0,1])
-    dom$bscores[,k] = dom$bscores[,k]/quantile(dom$bscores[,k],probs=0.99,na.rm=TRUE)                               # scale to top 1% (TODO: is this necessary, or should we just replace with max?)
-
-    # identify local maxima
-    lmax = local_maxima(as.vector(dom$bscores[,k]),tolerance=opt$tolerance,alpha=opt$alpha,maxd=opt$'flank-dist')
-    dom$E[,k] = lmax
-  }
-  rownames(dom$bscores) = rownames(est$y)
-  
-  return(dom)
-}
-
-
 
 
 ###### IdentifyDomains
@@ -1990,22 +1949,24 @@ IdentifyDomains = function(est, opt, full_matrix)
   }
 
   # function: identify local maxima  
-  local_maxima_new = function(x,tolerance,alpha,maxd)
+  local_maxima_new = function(x,alpha,slope,maxd)
   {
     n = length(x)
     y = rep(0,n)
-    x_order = order(x,decreasing=TRUE,na.last=NA)
-    kk = 1
-    while (kk<=length(x_order)) {
-      k = x_order[kk]
-      if ((x[k]<=0)|(x[k]<alpha)) break
-      minval_left = min(x[max(k-maxd,1):k],na.rm=TRUE)                                                                    # minimum value to the left of k
-      minval_right = min(x[k:min(k+maxd,n)],na.rm=TRUE)                                                                   # minimum value to the right of k
-      minpos_left = max(k-maxd,1) + min(which(x[max(k-maxd,1):k]<=minval_left)) - 1                                       # minimum left position
-      minpos_right = k + max(which(x[k:min(k+maxd,n)]<=minval_right)) - 1                                                 # minimum value to the right of k
-      for (j in minpos_left:minpos_right) if (y[j]==0) y[j] = -1                                                          # mask these bins from subsequent computations
-      if (x[k]/max(x[minpos_left],x[minpos_right],na.rm=TRUE)>=1.1) y[k] = 1                                              # TODO: parametrize this?
-      while ((kk<=length(x_order))&&(y[x_order[kk]]!=0)) kk = kk + 1                                                      # skip masked bins
+    if (is.na(alpha)==FALSE) {
+      x_order = order(x,decreasing=TRUE,na.last=NA)
+      kk = 1
+      while (kk<=length(x_order)) {
+        k = x_order[kk]
+        if ((x[k]<=0)|(x[k]<alpha)) break
+        minval_left = min(x[max(k-maxd,1):k],na.rm=TRUE)                                                                    # minimum value to the left of k
+        minval_right = min(x[k:min(k+maxd,n)],na.rm=TRUE)                                                                   # minimum value to the right of k
+        minpos_left = max(k-maxd,1) + min(which(x[max(k-maxd,1):k]<=minval_left)) - 1                                       # minimum left position
+        minpos_right = k + max(which(x[k:min(k+maxd,n)]<=minval_right)) - 1                                                 # minimum value to the right of k
+        for (j in minpos_left:minpos_right) if (y[j]==0) y[j] = -1                                                          # mask these bins from subsequent computations
+        if (x[k]/max(x[minpos_left],x[minpos_right],na.rm=TRUE)>=slope) y[k] = 1                                            # local maxima must be at least <slope> times above min-left and min-right
+        while ((kk<=length(x_order))&&(y[x_order[kk]]!=0)) kk = kk + 1                                                      # skip masked bins
+      }
     }  
 
     # add boundaries at NA values  
@@ -2031,8 +1992,7 @@ IdentifyDomains = function(est, opt, full_matrix)
   # function: find boundaries as local maxima
   find_boundaries = function(bscores,opt,cutoff)
   {
-#    if (opt$"local-norm"==TRUE) bscores = local_maxima_score(as.vector(bscores),maxd=opt$'flank-dist',scale=FALSE)      # local normalization (no scaling to [0,1])
-    b = local_maxima_new(as.vector(bscores),tolerance=opt$tolerance,alpha=cutoff,maxd=opt$'flank-dist')         # boundaries are local maxima of boundary scores
+    b = local_maxima_new(as.vector(bscores),alpha=cutoff,slope=opt$'slope',maxd=opt$'flank-dist')         # boundaries are local maxima of boundary scores
     return(b)
   }
   
@@ -2115,8 +2075,7 @@ IdentifyDomains = function(est, opt, full_matrix)
     # compute boundary scores for selected method
     dom$bscores[,k] = compute_scores(z,opt,est$ignored_rows)
 
-    # identify boundary score cutoff (only for first matrix)
-    #if (k==1) bscore_cutoff = calc_bscore_cutoff(dom$bscores[,k],opt,est$ignored_rows,n_iterations)
+    # identify boundary score cutoff
     bscore_cutoff = calc_bscore_cutoff(dom$bscores[,k],opt,est$ignored_rows,n_iterations)
     
     # identify boundaries as local maxima of boundary scores
@@ -2156,8 +2115,7 @@ op_domains <- function(cmdline_args)
     make_option(c("--distance2"), default=0, help="Distance from diagonal (in number of bins) used for boundary score computation [default \"%default\"]."),
     make_option(c("--skip-distance"), default=1, help="Distance from diagonal (in number of bins) to be skipped [default \"%default\"]."),
     make_option(c("--method"), default="ratio", help="Boundary score method: ratio, diffratio, intra-max, intra-min, intra-right, intra-left, inter, diff, DI, product-max, product-min [default \"%default\"]."),
-#    make_option(c("--local-norm"), action="store_true",default=FALSE, help="Apply local normalization to boundary scores"),
-    make_option(c("--tolerance"), default=0.01, help="Percent difference cutoff for merging local maxima [default \"%default\"]."),
+    make_option(c("--slope"), default=1.1, help="Local maxima should be at least <slope> times above nearby minima [default \"%default\"]."),
     make_option(c("--fdr"), default=1.0, help="False discovery rate cutoff [default \"%default\"]."),
     make_option(c("--flank-dist"), default=10, help="Local maxima neighborhood radius (in number of bins) [default \"%default\"]."),
     make_option(c("--track-dist"), default=10, help="Maximum distance (number of bins) from diagonal for track generation  [default=%default]."),
@@ -2308,7 +2266,6 @@ op_bscores <- function(cmdline_args)
     make_option(c("--distance"), default=5, help="Distance from diagonal (in number of bins) used for boundary score computation [default \"%default\"]."),
     make_option(c("--distance2"), default=0, help="Distance from diagonal (in number of bins) used for boundary score computation [default \"%default\"]."),
     make_option(c("--skip-distance"), default=1, help="Distance from diagonal (in number of bins) to be skipped [default \"%default\"]."),
-    make_option(c("--tolerance"), default=0.01, help="Percent difference cutoff for merging local maxima [default \"%default\"]."),
     make_option(c("--fdr"), default=1.0, help="False discovery rate cutoff [default \"%default\"]."),
     make_option(c("--flank-dist"), default=10, help="Local maxima neighborhood radius (in number of bins) [default \"%default\"]."),
     make_option(c("--bins"), default="", help="Comma-separated bins to be highlighted [default \"%default\"].")
@@ -2450,158 +2407,11 @@ local_maxima = function(x,tolerance,alpha,maxd)
 
 
 
-
-# ##########################
-#  OPERATION = BDIFF [OLD-VERSION]
-# ##########################
-
-op_bdiff_old_version <- function(cmdline_args) 
-{
-  # process command-line arguments
-  option_list <- list(
-    make_option(c("-v","--verbose"), action="store_true",default=FALSE, help="Print more messages."),
-    make_option(c("-o","--output-dir"), default="", help="Output directory (required) [default \"%default\"]."),
-    make_option(c("--row-labels"), action="store_true",default=FALSE, help="Input matrix has row labels"),
-    make_option(c("--min-lambda"), default=0.0, help="Minimum value for parameter lambda (only applicable if estimated max-lambda was set to Inf) [default=%default]."),
-    make_option(c("--max-lambda"), default=1.0, help="Maximum value for parameter lambda (only applicable if estimated max-lambda was set to Inf) [default=%default]."),
-    make_option(c("--n-lambda"), default=2, help="Number of lambdas (only applicable if estimated max-lambda was set to Inf) [default=%default]."),
-    make_option(c("--log2-lambda"), action="store_true",default=FALSE, help="Use log2 scale for lambda range (only applicable if estimated max-lambda was set to Inf)."),
-    make_option(c("--gamma"), default=0.0, help="Value for sparsity parameter gamma (only applicable if estimated max-lambda was set to Inf) [default=%default]."),
-    make_option(c("--ignored-loci"), default="", help="Ignored row and column names found in this list (not required) [default=\"%default\"]."),
-    make_option(c("--preprocess"), default="none", help="Matrix preprocessing: none (default), max, mean, log2, log2mean, rank, dist, distlog2."),
-    make_option(c("--distance"), default=5, help="Distance from diagonal (in number of bins) used for boundary score computation [default \"%default\"]."),
-    make_option(c("--distance2"), default=0, help="Distance from diagonal (in number of bins) used for boundary score computation [default \"%default\"]."),
-    make_option(c("--skip-distance"), default=1, help="Distance from diagonal (in number of bins) to be skipped [default \"%default\"]."),
-    make_option(c("--method"), default="ratio", help="Boundary score method: ratio, diffratio, intra-max, intra-min, intra-right, intra-left, inter, diff, DI [default \"%default\"]."),
-    make_option(c("--tolerance"), default=0.01, help="Percent difference cutoff for merging local maxima [default \"%default\"]."),
-    make_option(c("--fdr"), default=1.0, help="False discovery rate cutoff [default \"%default\"]."),
-    make_option(c("--delta"), default=0.25, help="Minimum difference for calling differential boundaries [default \"%default\"]."),
-    make_option(c("--flank-dist"), default=10, help="Local maxima neighborhood radius (in number of bins) [default \"%default\"]."),
-    make_option(c("--track-dist"), default=10, help="Maximum distance (number of bins) from diagonal for track generation  [default=%default]."),
-    make_option(c("--bins"), default="", help="Comma-separated bins to be highlighted [default \"%default\"].")
-  )
-  usage = 'hic-matrix.r bdiff [OPTIONS] MATRIX-FILES(tsv/RData)'
-  
-  # get command line options (if help option encountered print help and exit)
-  arguments <- parse_args(args=cmdline_args, OptionParser(usage=usage,option_list=option_list), positional_arguments=c(0,Inf));
-  opt <- arguments$options;
-  if (opt$verbose) print_options(opt)
-  files <- arguments$args;
-  if (length(files)<1) { write(paste('Usage:',usage),stderr()); quit(save='no'); }
-
-  # input arguments
-  out_dir <- opt$'output-dir'
-  bins = as.integer(strsplit(opt$'bins',',')[[1]])
-  if (length(bins)==0) { bin_points = c() } else { bin_points = (bins-min(bins))/(max(bins)-min(bins)) }
-  
-  # create output directory
-  if (out_dir=="") { write('Error: please specify output directory!',stderr()); quit(save='no') }
-  if (file.exists(out_dir)==FALSE) { dir.create(out_dir) } else { write('Error: output directory already exists!',stderr()); quit(save='no') }
-
-	# loading matrix data & identify domains
-	est = {}
-	dom = {}
-	for (f in 1:length(files)) { 
-    if (opt$verbose) write(paste('Loading input matrix ',files[f],'...',sep=''),stderr())
-	  est[[f]] = LoadEstimation(files[[f]],opt,replace.na=TRUE)
-	  if (is.null(est[[f]]$lambdas)==TRUE) { write("Error: maximum lambda cannot be infinite, use the 'extract' operation to select specific lambdas.",stderr()); quit(save='no') }
-	  if (opt$verbose) write("Computing boundary scores...",stderr())
-	  full_matrix = is_full_matrix(est[[f]]$y)
-	  dom[[f]] = IdentifyDomains(est[[f]],opt,full_matrix)
-	}
-
-  # saving data
-  save(est,dom,file=paste(out_dir,'/data.RData',sep=''))
-  
-  # repeat for every lambda!
-  for (ll in 1:length(est[[1]]$lambdas)) {
-	  if (opt$verbose) write(paste('Processing lambda=',est[[1]]$lambdas[ll],'...',sep=''),stderr())
-  
-		# obtaining boundary scores
-		scores0 = {}
-		scores = {}
-		lmax = {}
-		for (f in 1:length(files)) { 
-		  scores0[[f]] = dom[[f]]$scores[[ll]][,opt$method]
-		  scores[[f]] = dom[[f]]$bscores[,ll]
-		  lmax[[f]] = dom[[f]]$E[,ll]
-		}
-
-		# process data
-		if (opt$verbose) write("Identifying boundary changes...",stderr())
-		d = scores[[2]]-scores[[1]]          # lmax score differences
-		d2 = rep(0,length(d))
-		for (i in 1:length(d2)) {
-		  flank = max(1,i-opt$'flank-dist'):min(length(d2),i+opt$'flank-dist')
-		  if ((lmax[[1]][i]==1)&(max(lmax[[2]][flank],na.rm=TRUE)==0)&(d[i]<=-opt$delta)) d2[i] = -1       # TODO: is this too stringent??
-		  if ((lmax[[2]][i]==1)&(max(lmax[[1]][flank],na.rm=TRUE)==0)&(d[i]>=+opt$delta)) d2[i] = +1
-		}
-		b_gain = d2==+1
-		b_loss = d2==-1
-		if (opt$verbose) { write(paste('Losses = ',sum(b_loss),sep=''),stderr()); write(paste('Gains = ',sum(b_gain),sep=''),stderr()) }
-
-		# storing results
-		if (opt$verbose) { write("Storing results...",stderr()); }
-		table = cbind(names(scores[[1]]),d2)
-		colnames(table) = c('locus','gain/loss')
-		for (f in 1:length(files)) { table = cbind(table,lmax[[f]]); colnames(table)[ncol(table)] = paste('boundary-sample-',f,sep='') }
-		for (f in 1:length(files)) { table = cbind(table,round(scores[[f]],4)); colnames(table)[ncol(table)] = paste('lmax-score-sample-',f,sep='') }
-		for (f in 1:length(files)) { table = cbind(table,round(scores0[[f]],4)); colnames(table)[ncol(table)] = paste('lmax-score0-sample-',f,sep='') }
-		write.table(table,col.names=T,row.names=F,quote=F,sep='\t',file=paste(out_dir,'/table.k=',formatC(ll,width=3,format='d',flag='0'),'.tsv',sep=''))
-		
-		# generate snapshots
-		if (length(data)!=0) {
-		  if (opt$verbose) write("Generating snapshots...",stderr())
-		  pdf(paste(out_dir,'/diff.k=',formatC(ll,width=3,format='d',flag='0'),'.pdf',sep=''),height=9,width=18)
-		  par(mfcol=c(6,2),mar=c(0.5,0.5,0.5,0.5))
-		  flank = 2.5*opt$'track-dist'
-		  s0min = min(sapply(scores0,min,na.rm=TRUE))
-		  s0max = max(sapply(scores0,max,na.rm=TRUE))
-		  zlim = {}
-		  for (f in 1:length(files)) {
-		    zlim[[f]] = max(est[[f]]$solObj[ll,,])
-		    if (opt$preprocess=='none') zlim[[f]] = log2(zlim[[f]]+1)
-		  }
-		  for (j in which(b_loss|b_gain)) if ((j>flank)&(j<=length(d2)-flank)) {
-		    if (opt$verbose) write(paste(j,lmax[[1]][j],lmax[[2]][j]),stderr())
-		    I = (j-flank):(j+flank)
-		    for (f in 1:length(files)) {
-		      full_matrix = is_full_matrix(est[[f]]$y)
-		      if (full_matrix) { mat = MatrixRotate45(est[[f]]$solObj[ll,I,I],opt$'track-dist')
-		      } else { mat = est[[f]]$solObj[ll,I,1:min(ncol(est[[f]]$y),opt$'track-dist')] }
-		      if (opt$preprocess=='none') mat = log2(mat+1)
-		      image(mat,xaxt='n',yaxt='n',zlim=c(0,zlim[[f]]))
-		      s0 = as.vector(scores0[[f]][I])
-		      s = as.vector(scores[[f]][I])
-		      lines(seq(0,1,length.out=length(s0)),(s0-s0min)/(s0max-s0min),col='green4')
-#		      lines(seq(0,1,length.out=length(s)),s,col='blue')   # TODO: restore this?
-		      lines(seq(0,1,length.out=length(s)),(s-min(s))/(max(s)-min(s)),col='blue')
-		      enorm = which(lmax[[f]][I]==1)/length(I)
-		      abline(v=(which(lmax[[f]][I]==1)-1)/(length(I)-1),col='blue')
-		      d = 1/length(I)
-		      pp = 0.5
-		      rect(pp-d,0,pp+d,0.04,col='purple',border='purple')
-		    }
-		  }
-		  dev.off();
-		}
-
-  }
-  		
-  # done
-  if (opt$verbose) { write("Done.",stderr()); }
-  quit(save='no')
-}
-
-
-
-
-
 # ##########################
 #  OPERATION = BDIFF
 # ##########################
 
-op_bdiff_new_version <- function(cmdline_args) 
+op_bdiff <- function(cmdline_args) 
 {
   # process command-line arguments
   option_list <- list(
@@ -2619,7 +2429,7 @@ op_bdiff_new_version <- function(cmdline_args)
     make_option(c("--distance"), default=5, help="Distance from diagonal (in number of bins) used for boundary score computation [default \"%default\"]."),
     make_option(c("--distance2"), default=0, help="Distance from diagonal (in number of bins) used for boundary score computation [default \"%default\"]."),
     make_option(c("--skip-distance"), default=1, help="Distance from diagonal (in number of bins) to be skipped [default \"%default\"]."),
-    make_option(c("--tolerance"), default=0.01, help="Percent difference cutoff for merging local maxima [default \"%default\"]."),
+    make_option(c("--slope"), default=1.1, help="Local maxima should be at least <slope> times above nearby minima [default \"%default\"]."),
     make_option(c("--fdr"), default=1.0, help="False discovery rate cutoff [default \"%default\"]."),
     make_option(c("--z1"), default=1.0, help="Minimum z-score cutoff for calling activated domains [default \"%default\"]."),
     make_option(c("--z2"), default=0.5, help="Minimum z-score change for calling differential boundaries [default \"%default\"]."),
@@ -3192,7 +3002,7 @@ if (op=="preprocess") {
 } else if (op=="bscores") {
   op_bscores(args);
 } else if (op=="bdiff") {
-  op_bdiff_new_version(args);
+  op_bdiff(args);
 } else if (op=="domains") {
   op_domains(args);
 } else if (op=="domain-cmp") {
