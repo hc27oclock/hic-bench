@@ -11,7 +11,6 @@ set boundary_scores_params = ( \
 --distance2=`echo 500000/$bin_size | bc` \
 --skip-distance=0 \
 --flank-dist=`echo 500000/$bin_size | bc` \
---slope=1.1 \
 )
 
 
