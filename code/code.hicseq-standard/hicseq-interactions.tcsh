@@ -37,7 +37,7 @@ foreach inpdir ($inpdirs)
   if (-e $inpdir/stats.tsv) then
     set n_reads = ($n_reads `cat $inpdir/stats.tsv | grep '^ds-accepted-intra	' | cut -f2`)
   else
-    set n_reads = ($n_reads 1)
+    set n_reads = ($n_reads 0)
   endif
 end
 set n_reads = `echo $n_reads | tr ' ' ','`
