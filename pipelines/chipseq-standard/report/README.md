@@ -2,6 +2,16 @@
 
 This report will automatically parse the `run` file of each pipeline step included in the `pipeline/index.txt` file for information to include in the report.
 
+Relevant fields from the `run` file will look like this:
+
+```
+#TITLE: Alignment Summary Stats
+#DESCRIPTION: Create barplots to show the number of reads that are aligned versus unaligned. 
+#FIGURE: alignment_barplots.pdf
+#SHEET: alignment_stats_extended.csv
+
+```
+
 The report will check for the existence of listed sheets and figures, and include them in a LaTeX beamer style report.
 
 ### Report Compilation
