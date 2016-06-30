@@ -35,30 +35,15 @@ fi
 Rscript --slave --no-save --no-restore - "$1" <<EOF
   ## R code
   cat("\nR loaded\n")
+  # get script args
   args <- commandArgs(TRUE)
   cat("Script args are:\n")
   args
-  cat("Checking to see if R pacakge knitr is available...\n")
-  # check if knitr is installed.. 
-  # if (!require("knitr")) install.packages("knitr")
-  if (!require("knitr")) {
-    # cat("knitr not installed, attempting to install..\n\n")
-    cat("Sorry you've got to go install knitr to your system before this script can compile the document\n\n")
-    # code that I tried to use to install R locally.. this doesn't work... 
-    # system("mkdir -p ~/software/R/R_libs")
-    # tmp_dir<-system("readlink -m ~/software/R/R_libs",intern = TRUE)
-    # cat("\n\n")
-    
-    # install.packages("knitr",lib = tmp_dir,repos="http://cran.rstudio.com/",destdir = tmp_dir)
-    # library("knitr",lib.loc = tmp_dir)
-    
-    # exit if knitr not installed, haven't fogured out yet how to get the script to install it locally for the user / session
-    quit()
-  } else {
-  cat("knitr is already installed, loading knitr\n")
+  
+  # load knitr
   library("knitr")
-    
-  }
+  
+  # compile document
   cat("Compiling document with knitr\n")
   knit(args[1])
 EOF
@@ -78,11 +63,7 @@ if [ -f ${tmp_file%%.Rnw}.tex ]; then
       # gdate "$@"
       echo -e "Compiling the TeX file; file is:\n${tmp_file%%.Rnw}.tex\n\n"
       # compile with pdflatex
-      pdflatex "${tmp_file%%.Rnw}.tex"
-      # compile it again...
-      pdflatex "${tmp_file%%.Rnw}.tex"
-      # one more time just to be safe... yes, this matters!
-      pdflatex "${tmp_file%%.Rnw}.tex"
+      pdflatex "${tmp_file%%.Rnw}.tex" && pdflatex "${tmp_file%%.Rnw}.tex" && pdflatex "${tmp_file%%.Rnw}.tex"
   else
       # date "$@"
       echo -e "pdflatex not installed, unable to compile file!\n"
