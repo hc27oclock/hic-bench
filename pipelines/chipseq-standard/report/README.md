@@ -14,6 +14,10 @@ For manual report compilation, follow these steps:
 #### Step 2a.
 Alternatively, run the compile script:
 
+```
+compile_report_wrapper.sh chipseq_report.Rnw
+```
+
 #### Step 2b.
 Compile the report RNW file with knitr:
 
