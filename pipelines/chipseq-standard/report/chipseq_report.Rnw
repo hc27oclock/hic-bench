@@ -93,7 +93,7 @@ Pipeline_Index<-scan(file=paste0(Pipeline_dir,"/index.txt"),what="", sep="\n",qu
 \setcounter{tocdepth}{3} % table of contents depth
 \usepackage{breakurl}
 \usepackage{cite} % for citations, BibTeX I think
-\usepackage{etoolbox} % this was not installed on HPCF, its in my home dir right now!! % has extra tools for LaTeX forloops, etc.; might not actually need this, use R loops to cat() LaTeX markup instead, much easier!
+\usepackage{etoolbox} % has extra tools for LaTeX forloops, etc.; might not actually need this, use R loops to cat() LaTeX markup instead, much easier!
 \usepackage{forloop} % for LaTeX for loops; easier to use R loops to 'cat' TeX into the document instead!!
 \usepackage{tikz} % for custom graphics
 %\usepackage{subcaption} %for subfigures%
