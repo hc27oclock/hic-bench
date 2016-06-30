@@ -12,7 +12,7 @@ In the project directory file `project_info.txt`, fill in the required fields wi
 For manual report compilation, follow these steps:
 
 #### Step 2a.
-Alternatively, run the compile script:
+Run the compile script:
 
 ```
 compile_report_wrapper.sh chipseq_report.Rnw
