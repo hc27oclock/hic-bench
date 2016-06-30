@@ -1,5 +1,6 @@
 #!/usr/bin/env Rscript
 
+write("Installing R packages...", stderr())
 # old version :
 # packages = c("flsa", "genlasso", "optparse", "ggplot2", "pastecs", "plotrix",
 #              "reshape2", "zoo", "plyr", "data.table", "gridExtra", "scales", "grid",
