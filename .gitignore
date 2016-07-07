@@ -17,3 +17,4 @@ misc/misc_files/
 .Rhistory
 data
 misc_files
+fix_install.R
