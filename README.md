@@ -1,7 +1,7 @@
-# NYU Applied Bioinformatics Center Pipelines
-
-This is the main repository NYU bioinformatics pipelines. 
+# HiC-Bench
+A set up pipelines for Hi-C and ChIP-Seq analysis.
 
 User manual for the pipeline can be found here:  
 https://github.com/NYU-BFX/hic-bench_documentation/blob/master/HiC-Bench_manual.pdf
+
 
