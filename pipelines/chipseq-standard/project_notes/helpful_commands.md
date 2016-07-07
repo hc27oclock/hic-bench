@@ -8,7 +8,7 @@ Find and delete all 'errors' directories (be careful with this!)
 
 `analysis_dir/pipeline$ find . -mindepth 2  -type d -name "errors" -exec rm -rf {} \;`
 
-Find and delete all 'results' directories except for the alignments (be carefule with this!)
+Find and delete all 'results' directories except for the alignments (be careful with this!)
 
 `analysis_dir/pipeline$ find . -type d -name "results" ! -path "*align*" -exec rm -rf {} \;`
 
