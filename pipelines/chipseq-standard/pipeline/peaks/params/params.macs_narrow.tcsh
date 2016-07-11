@@ -3,7 +3,10 @@
 source ./inputs/params/params.tcsh
 
 module unload gcc
-module load macs/2.0.10.20131216
+module unload python
+# macs now part of python module
+# module load macs/2.0.10.20131216
+module load python/2.7.3
 
 set extsize = `./code/read-sample-sheet.tcsh $sheet "$objects" fragmentation-size`
 set extsize = `echo $extsize | tools-vectors m -n 0`

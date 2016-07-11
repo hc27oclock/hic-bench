@@ -15,9 +15,8 @@ set symlink = $3
 
 mkdir -p $analysis_dir
 
-# setup link to original code repo
+# original code repo
 set repo_code_dir = `readlink -f $0 | sed 's/\/[^/]\+$//'`/..
-ln -s $repo_code_dir code.origin
 
 # copy pipeline structure to new analysis directory
 echo "Copying pipeline structure and code into $analysis_dir..."
@@ -25,8 +24,13 @@ set pipeline_dir = $repo_code_dir/../pipelines/$pipeline_name
 set pipeline_dir = `echo $pipeline_dir | sed 's/[/]\+$//'`    # remove trailing '/'
 rsync -auv --exclude=results $pipeline_dir/ $analysis_dir
 
-# create a copy OR symbolic link to the code
+# go to analysis dir to create various symlinks
 cd $analysis_dir
+
+# setup link to original code repo
+ln -s $repo_code_dir code.origin
+
+# create a copy OR symbolic link to the code
 rm -f code
 if ($symlink == 'true') then
   ln -s $repo_code_dir/code.$pipeline_name code
