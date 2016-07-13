@@ -5,10 +5,10 @@
 options(width=300)
 
 # load libraries
-library(DiffBind)
-library(RColorBrewer)
-library(biomaRt)
-library(ChIPpeakAnno)
+library(DiffBind, quietly=T)
+library(RColorBrewer, quietly=T)
+library(biomaRt, quietly=T)
+library(ChIPpeakAnno, quietly=T)
 
 # process command-line arguments (only arguments after --args)
 args = commandArgs(trailingOnly=T)
@@ -21,53 +21,59 @@ blockFactor = args[4]
 # extract differentially bound peaks and annotate them
 generateDiffBindReport = function(dba, contrast, th=0.05, method=DBA_DESEQ2, reps=F, tss, mart.df, out.dir=".")
 {
-	library(DiffBind)
-	library(ChIPpeakAnno)
+	library(DiffBind, quietly=T)
+	library(ChIPpeakAnno, quietly=T)
 
 	# extract contrast group names
-	contrasts = as.matrix(dba.show(db, bContrasts=T))
+	contrasts = as.matrix(dba.show(dba, bContrasts=T))
 	group1 = contrasts[as.character(contrast), "Group1"]
 	group2 = contrasts[as.character(contrast), "Group2"]
 
-	# report
+	# generate report (GRanges object)
 	message("[generateDiffBindReport] generate diffbind report")
 	message("[generateDiffBindReport] contrast num: ", contrast)
 	message("[generateDiffBindReport] group1: ", group1)
 	message("[generateDiffBindReport] group2: ", group2)
 	message("[generateDiffBindReport] threshold: ", th)
-	db.gr = dba.report(db, contrast=contrast, method=method, th=th, bCounts=reps, DataType=DBA_DATA_GRANGES)
+	db.gr = dba.report(dba, contrast=contrast, method=method, th=th, bCounts=reps, DataType=DBA_DATA_GRANGES)
 
-	message("[generateDiffBindReport] annotate peaks")
-	db.ann.gr = annotatePeakInBatch(db.gr, AnnotationData=tss, PeakLocForDistance="middle", FeatureLocForDistance="TSS", output="shortestDistance", multiple=T)
+	message("[generateDiffBindReport] num sig peaks: ", length(db.gr))
 
-	# add gene symbols
-	message("[generateDiffBindReport] add gene symbols")
-	db.ann.df = merge(as.data.frame(db.ann.gr) , mart.df , by.x=c("feature"), by.y=c("ensembl_gene_id") , all.x=T)
+	# annotate if any significant results were found
+	if (length(db.gr)) {
 
-	# keep just the relevant columns
-	db.ann.df = db.ann.df[c(
-		"seqnames","start","end","feature","external_gene_name","gene_biotype",
-		"start_position","end_position",
-		"insideFeature","distancetoFeature","shortestDistance","fromOverlappingOrNearest")]
+		message("[generateDiffBindReport] annotate peaks")
+		db.ann.gr = annotatePeakInBatch(db.gr, AnnotationData=tss, PeakLocForDistance="middle", FeatureLocForDistance="TSS", output="shortestDistance", multiple=T)
 
-	# merge bed and annotations
-	ann.merged = merge(as.data.frame(db.gr), db.ann.df, by.x=c("seqnames","start","end"), by.y=c("seqnames","start","end") , all=T)
+		# add gene symbols
+		message("[generateDiffBindReport] add gene symbols")
+		db.ann.df = merge(as.data.frame(db.ann.gr) , mart.df , by.x=c("feature"), by.y=c("ensembl_gene_id") , all.x=T)
 
-	# sort
-	ann.merged$seqnames = as.character(ann.merged$seqnames)
-	ann.merged = ann.merged[with(ann.merged, order(seqnames, start)), ]
+		# keep just the relevant columns
+		db.ann.df = db.ann.df[c(
+			"seqnames","start","end","feature","external_gene_name","gene_biotype",
+			"start_position","end_position",
+			"insideFeature","distancetoFeature","shortestDistance","fromOverlappingOrNearest")]
 
-	message("[generateDiffBindReport] save file")
-	# generate file name
-	th = format(th, nsmall=2)
-	contrast.name = paste(group1, "-vs-", group2, sep="")
-	if("Block1Val" %in% colnames(contrasts))
-	{
-		contrast.name = paste(contrast.name, ".blocking", sep="")
+		# merge bed and annotations
+		ann.merged = merge(as.data.frame(db.gr), db.ann.df, by.x=c("seqnames","start","end"), by.y=c("seqnames","start","end") , all=T)
+
+		# sort
+		ann.merged$seqnames = as.character(ann.merged$seqnames)
+		ann.merged = ann.merged[with(ann.merged, order(seqnames, start)), ]
+
+		message("[generateDiffBindReport] save file")
+		# generate file name
+		th = format(th, nsmall=2)
+		contrast.name = paste(group1, "-vs-", group2, sep="")
+		if("Block1Val" %in% colnames(contrasts))
+		{
+			contrast.name = paste(contrast.name, ".blocking", sep="")
+		}
+		filename = paste(out.dir, "/diff_bind.", contrast.name, ".p", gsub(pattern="\\.", replacement="", x=th), ".csv", sep="")
+		message("[generateDiffBindReport] save as: ", filename)
+		write.csv(ann.merged, row.names=F, file=filename)
 	}
-	filename = paste(out.dir, "/diff_bind.", contrast.name, ".p", gsub(pattern="\\.", replacement="", x=th), ".csv", sep="")
-	message("[generateDiffBindReport] save as: ", filename)
-	write.csv(ann.merged, row.names=F, file=filename)
 }
 
 message(" ========== load data ========== ")
@@ -149,7 +155,7 @@ for (i in 1:length(row.names(contrasts))) {
 # repeat with blocking factor if blocking factor parameter was passed
 if (!is.na(args[4])) {
 	message(" ========== re-analyze with blocking factor ========== ")
-	
+
 	# automatic contrasts with blocking factor
 	db = dba.contrast(db, categories=DBA_CONDITION, block=DBA_REPLICATE)
 	db = dba.analyze(db, bFullLibrarySize=T, bCorPlot=F)

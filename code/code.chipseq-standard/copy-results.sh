@@ -49,21 +49,22 @@ if [[ -d $Pipeline_dir/align/results ]]; then
   Pipeline_align_dir="$Pipeline_dir/align/results"
 
   # make outdir dir
-  OUT_DIR_align="$OUT_DIR/alignment/bigwigs"
+  OUT_DIR_align="$OUT_DIR/alignment/bigwig"
   mkdir -p $OUT_DIR_align
-  
+
   # glob the bigwig files
   BIG_WIGS=($Pipeline_align_dir/**/*.bw)
 
   for i in "${BIG_WIGS[@]}"; do
-   # get the sample name from its dir name
+    # get the sample name from its dir name
     q=$(basename $(dirname "$i" ) )
 
-   # strip out things we don't need in the name
+    # strip out things we don't need in the name
     z=${q/*./}
 
-   # copy the file with new name (don't overwrite if already present!)
-    cp -avn "$i" "$OUT_DIR_align"/"$z".bw
+    # copy the file with new name (don't overwrite if already present!)
+    echo "${z}.bw"
+    rsync -rt "$i" "$OUT_DIR_align"/"${z}.bw"
   done
 else
   echo "BIG WIG RESULTS NOT FOUND"
@@ -82,7 +83,7 @@ if [[ -d $Pipeline_dir/align/results ]]; then
   # make outdir dir
   OUT_DIR_align="$OUT_DIR/alignment/bam"
   mkdir -p $OUT_DIR_align
-  
+
   # glob the bam files
   BAM_list=($Pipeline_align_dir/**/*.bam)
 
@@ -91,7 +92,9 @@ if [[ -d $Pipeline_dir/align/results ]]; then
     q=$(basename $(dirname "$i" ) )
     # strip out things we don't need in the name
     z=${q/*./}
-    cp -avn "$i" "$OUT_DIR_align"/"$z".bam
+    echo "${z}.bam"
+    rsync -rt "$i" "$OUT_DIR_align"/"${z}.bam"
+    rsync -rt "${i}.bai" "$OUT_DIR_align"/"${z}.bam.bai"
   done
 else
   echo "BAM RESULTS NOT FOUND"
@@ -105,18 +108,19 @@ fi
 ### COPY THE PEAKS
 if [[ -d $Pipeline_dir/peaks/results ]]; then
   Pipeline_peaks_dir="$Pipeline_dir/peaks/results"
-  
+
   # make the outdir
   OUT_DIR_peaks=$OUT_DIR/peaks
   mkdir -p $OUT_DIR_peaks
-  
+
   # glob the peaks files we want
   FILES=($Pipeline_peaks_dir/**/@(macs_peaks.xls|peaks.bed|peak-scores.bed|macs_peaks.narrowPeak|macs_summits.bed|peaks.tsv) )
 
   for i in "${FILES[@]}"; do
     # flatten the filepath to make the filename # consider changing this later ?
     TMP_NAME=$(echo ${i#*results/} | tr / _ )
-    cp -avn $i $OUT_DIR_peaks/$TMP_NAME
+    echo "$OUT_DIR_peaks/$TMP_NAME"
+    rsync -rt $i $OUT_DIR_peaks/$TMP_NAME
   done
 fi
 #
@@ -130,14 +134,15 @@ if [ -d $Pipeline_dir/pca/results ]; then
   # make the outdir
   OUT_DIR_pca="$OUT_DIR/pca"
   mkdir -p $OUT_DIR/pca
-  
+
   # glob the PCA files we want
   FILES=($Pipeline_pca_dir/**/@(report.raw.pdf|report.qnorm.pdf|report.mnorm.pdf|labels.tsv|report.mnorm.pdf) )
 
   for i in "${FILES[@]}"; do
     # flatten the filepath to make the filename # consider changing this later ?
     TMP_NAME=$(echo ${i#*pca.standard/} | tr / _ )
-    cp -avn $i $OUT_DIR_pca/$TMP_NAME
+    echo "$OUT_DIR_pca/$TMP_NAME"
+    rsync -rt $i $OUT_DIR_pca/$TMP_NAME
   done
 fi
 
@@ -148,7 +153,7 @@ if [ -d $Pipeline_dir/heatmaps/results ]; then
   # make the outdir
   OUT_DIR_heatmap="$OUT_DIR/heatmaps"
   mkdir -p $OUT_DIR_heatmap
-  
+
   # glob the PCA files we want
   FILES=($Pipeline_heatmap_dir/**/@(clustering.tif) )
   for i in "${FILES[@]}"; do
@@ -157,24 +162,24 @@ if [ -d $Pipeline_dir/heatmaps/results ]; then
     TMP_NAME=$(echo ${i//align.by_sample.bowtie2\/})
     TMP_NAME=$(echo ${TMP_NAME//all-samples\/})
     TMP_NAME=$(echo $TMP_NAME | tr / _ )
-    cp -avn $i $OUT_DIR_heatmap/$TMP_NAME
+    echo "$OUT_DIR_heatmap/$TMP_NAME"
+    rsync -rt $i $OUT_DIR_heatmap/$TMP_NAME
   done
 fi
 
 
 
 
-# Copy qc fiongerprints; chip-fingerprint.pdf
+# Copy qc fingerprints; chip-fingerprint.pdf
 if [ -d $Pipeline_dir/qc/results ]; then
   Pipeline_qc_dir="$Pipeline_dir/qc/results"
   # make the outdir
   OUT_DIR_qc="$OUT_DIR/qc"
   mkdir -p $OUT_DIR_qc
-  
+
   # glob the PCA files we want
   FILES=($Pipeline_qc_dir/**/@(chip-fingerprint.pdf) )
 
-  
   for i in "${FILES[@]}"; do
     # flatten the filepath to make the filename # consider changing this later ?
     TMP_NAME=$(echo ${i#*align.by_sample.bowtie2\/} | tr / _ )
@@ -182,7 +187,7 @@ if [ -d $Pipeline_dir/qc/results ]; then
     # TMP_NAME=$(echo ${i//align.by_sample.bowtie2\/} | tr / _ )
     # TMP_NAME=$(echo ${TMP_NAME//all-samples\/})
     # TMP_NAME=$(echo $TMP_NAME | tr / _ )
-    cp -avn $i $OUT_DIR_qc/$TMP_NAME
+    rsync -rt $i $OUT_DIR_qc/$TMP_NAME
   done
 fi
 
@@ -195,7 +200,7 @@ if [ -d $Pipeline_dir/fastqc/results ]; then
   # make the outdir
   OUT_DIR_fastqc="$OUT_DIR/fastqc"
   mkdir -p $OUT_DIR_fastqc
-  rsync -avh --exclude "job.*" --exclude ".db*" "$Pipeline_fastqc_dir/" "$OUT_DIR_fastqc"
+  rsync -rt --exclude "job.*" --exclude ".db*" "$Pipeline_fastqc_dir/" "$OUT_DIR_fastqc"
 fi
 # if [ ! -d $OUT_DIR/$(basename $FastQC_dir) ]; then
 #   cp -avn "$FastQC_dir" $OUT_DIR/$(basename $FastQC_dir)
@@ -238,8 +243,8 @@ if [ -d "$Pipeline_dir/align-stats/results" ]; then
   # make the outdir
   OUT_DIR_algnstats="$OUT_DIR/align-stats"
   mkdir -p "$OUT_DIR_algnstats"
-  
-  rsync -avh --exclude "job.*" "$Pipeline_dir/align-stats/results" "$OUT_DIR_algnstats"
+
+  rsync -rt --exclude "job.*" "$Pipeline_dir/align-stats/results" "$OUT_DIR_algnstats"
 fi
 
 
@@ -250,21 +255,18 @@ if [ -d $Pipeline_dir/diffbind/results ]; then
     # make the outdir
     OUT_DIR_diffbind="$OUT_DIR/diffbind"
     mkdir -p $OUT_DIR_diffbind
-    rsync -avh --exclude "job.*" --exclude ".db*" "$Pipeline_diffbind_dir" "$OUT_DIR_diffbind"
-    # see Igor's script for this
+    rsync -rt --exclude "job.*" --exclude ".db*" "$Pipeline_diffbind_dir" "$OUT_DIR_diffbind"
   fi
 fi
 
 
 # Copy the sample sheet
-if [ ! -f $OUT_DIR/sample-sheet.tsv ]; then
-  cp -avn "$Pipeline_dir/inputs/sample-sheet.tsv" $OUT_DIR/sample-sheet.tsv
-fi
+rsync -rt "$Pipeline_dir/inputs/sample-sheet.tsv" $OUT_DIR/sample-sheet.tsv
 
 
 # copy the report
 if [ ! -f $OUT_DIR/chipseq_report.pdf ]; then
-  cp -avn "$PROJ_DIR/report/chipseq_report.pdf" $OUT_DIR/chipseq_report.pdf
+  rsync -rt "$PROJ_DIR/report/chipseq_report.pdf" $OUT_DIR/chipseq_report.pdf
 fi
 
 # unset globs if it wasn't originally set
@@ -274,5 +276,5 @@ fi
 
 
 # set outdir permissions to allow read/write access to group members
-chmod g+rw -R $OUT_DIR*
-# chgrp -Rf results $OUT_DIR* # doesn't work yet..? Fail silently
+# chmod g+r -R $OUT_DIR*
+
