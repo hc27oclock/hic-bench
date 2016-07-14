@@ -49,7 +49,7 @@ if [[ -d $Pipeline_dir/align/results ]]; then
   Pipeline_align_dir="$Pipeline_dir/align/results"
 
   # make outdir dir
-  OUT_DIR_align="$OUT_DIR/alignment/bigwig"
+  OUT_DIR_align="$OUT_DIR/bigwig"
   mkdir -p $OUT_DIR_align
 
   # glob the bigwig files
@@ -81,7 +81,7 @@ if [[ -d $Pipeline_dir/align/results ]]; then
   Pipeline_align_dir="$Pipeline_dir/align/results"
 
   # make outdir dir
-  OUT_DIR_align="$OUT_DIR/alignment/bam"
+  OUT_DIR_align="$OUT_DIR/bam"
   mkdir -p $OUT_DIR_align
 
   # glob the bam files
@@ -244,7 +244,7 @@ if [ -d "$Pipeline_dir/align-stats/results" ]; then
   OUT_DIR_algnstats="$OUT_DIR/align-stats"
   mkdir -p "$OUT_DIR_algnstats"
 
-  rsync -rt --exclude "job.*" "$Pipeline_dir/align-stats/results" "$OUT_DIR_algnstats"
+  rsync -rt --exclude "job.*" "$Pipeline_dir/align-stats/results/" "$OUT_DIR_algnstats"
 fi
 
 
@@ -255,7 +255,7 @@ if [ -d $Pipeline_dir/diffbind/results ]; then
     # make the outdir
     OUT_DIR_diffbind="$OUT_DIR/diffbind"
     mkdir -p $OUT_DIR_diffbind
-    rsync -rt --exclude "job.*" --exclude ".db*" "$Pipeline_diffbind_dir" "$OUT_DIR_diffbind"
+    rsync -rt --exclude "job.*" --exclude ".db*" "$Pipeline_diffbind_dir/" "$OUT_DIR_diffbind"
   fi
 fi
 
