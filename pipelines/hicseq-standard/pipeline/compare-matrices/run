@@ -29,7 +29,7 @@ set cmd = "./code/code.main/scripts-qsub-wrapper $resources ./code/hicseq-$op.tc
 Rscript ./code/code.main/pipeline-master-explorer.r -v "$cmd" $results/$op "params/params.*.tcsh" "$inpdirs" "genome" "sample" 2
 
 # run and wait until done!
-set max_jobs = 10
+set max_jobs = 40
 if ("$opt" != "--dry-run") scripts-submit-jobs ./$results/.db/run $max_jobs
 
 

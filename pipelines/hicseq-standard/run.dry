@@ -13,7 +13,7 @@ endif
 
 # install required R packages
 source inputs/params/params.tcsh
-Rscript ./code/code.main/install-r-packages.r
+Rscript ./code/install-hicbench-r-packages.r
 
 # validate sample sheet
 scripts-send2err "Validating sample sheet..."
