@@ -1,9 +1,9 @@
 #!/bin/bash
 
 ##
-## USAGE: setup-sample-files.sh <fastq dir>
+## USAGE: setup-sample-files.sh <fastq source dir>
 ##
-## FUNCTION: scan fastq directory and generate proper input directory structure
+## FUNCTION: will scan given directory and generate proper sample structure in "./inputs/fastq/"
 ##
 
 
@@ -41,7 +41,7 @@ INPUTS_DIR="${PROJECT_DIR}/inputs"
 # check that inputs directory exists
 if [ ! -d $INPUTS_DIR ] || [ ! $INPUTS_DIR ]
 then
-	echo -e "\n ERROR! INPUTS DIR $INPUTS_DIR DOES NOT EXIST \n" >&2
+	echo -e "\n ERROR! INPUTS DIR $INPUTS_DIR DOES NOT EXIST (THIS SHOULD BE RUN FROM ANALYSIS DIR) \n" >&2
 	exit 1
 fi
 
