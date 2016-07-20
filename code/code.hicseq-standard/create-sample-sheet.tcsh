@@ -28,6 +28,8 @@ foreach sample (`cd $inpdir; ls -1d *`)
     set enzyme = HindIII
   else if (`echo $sample | tr '-' '\n' | grep -ic NcoI` == 1) then
     set enzyme = NcoI
+  else if (`echo $sample | tr '-' '\n' | grep -ic MboI` == 1) then
+    set enzyme = MboI
   else 
     set enzyme = NA
   endif
