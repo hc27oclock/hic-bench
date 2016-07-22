@@ -11,9 +11,9 @@
 
 # Check for required packages
 # and install
-for (package in c("plyr","ggplot2","RColorBrewer","grid")) {
-	if(package %in% rownames(installed.packages()) == FALSE){install.packages(package, repos="http://cran.us.r-project.org")}
-}
+#for (package in c("plyr","ggplot2","RColorBrewer","grid")) {
+#	if(package %in% rownames(installed.packages()) == FALSE){install.packages(package, repos="http://cran.us.r-project.org")}
+#}
  
 # Load the libraries
 library(plyr)
@@ -54,15 +54,16 @@ read_category_no <- length(unique(total$READ_CATEGORY))
 if(read_category_no > 2){mycolors <- mycolors1}else{mycolors <- mycolors2}
  
 ce <- ddply(total,"SAMPLE",transform, PERCENT_READS=READS/sum(as.numeric(READS))*100)
-ce$READ_CATEGORY <- factor(ce$READ_CATEGORY, levels=c("ds-accepted-intra","ds-accepted-inter","ds-duplicate-intra","ds-duplicate-inter","multihit","single-sided","ds-no-fragment","ds-same-fragment","ds-too-close","ds-too-far","unpaired","unmapped","unclassified"))
+ce$READ_CATEGORY <- factor(ce$READ_CATEGORY, levels=c("ds-accepted-intra","ds-accepted-inter","ds-duplicate-intra","ds-duplicate-inter","multihit","single-sided","ds-no-fragment","ds-same-fragment","ds-too-close","ds-too-far","unpaired","unmapped","unclassified"), ordered=TRUE)
 ce <- subset(ce,ce$READS!=0)
+ce = arrange(ce, READ_CATEGORY)
 
 # Get the output name
 out <- paste(output,"percent.pdf",sep="/")
 
 pdf(sprintf("%s",out))
 ggplot(ce, aes(x=SAMPLE,y=PERCENT_READS, fill=READ_CATEGORY))+
-	geom_bar(aes(order=ce$READ_CATEGORY), stat="identity",colour="black",width=0.5) +
+	geom_bar(aes(order=ce$READ_CATEGORY), stat="identity") +
 	theme(legend.background = element_rect(fill="gray90", size=.5, linetype="dotted")) + theme(legend.key.size = unit(0.4,"cm"), plot.margin = unit(c(3.5,0.5,0.5,0.5),"cm")) + theme(legend.position=c(0.5, 1.15)) +
 	guides(fill=guide_legend(reverse=FALSE, title=NULL, ncol=4)) +
 	scale_fill_manual(values=mycolors) +
@@ -84,7 +85,7 @@ out <- paste(output,"counts.pdf",sep="/")
 
 pdf(sprintf("%s",out))
 ggplot(ce1, aes(x=SAMPLE,y=READS/1000000, fill=READ_CATEGORY))+
-	geom_bar(aes(order=ce$READ_CATEGORY), stat="identity",colour="black",width=0.5) +
+	geom_bar(aes(order=ce$READ_CATEGORY), stat="identity") +
 	theme(legend.background = element_rect(fill="gray90", size=.5, linetype="dotted")) + theme(legend.key.size = unit(0.4,"cm"), plot.margin = unit(c(3.5,0.5,0.5,0.5),"cm")) + theme(legend.position=c(0.5, 1.15)) +
 	guides(fill=guide_legend(reverse=FALSE, title=NULL, ncol=4)) +
 	scale_fill_manual(values=mycolors) +

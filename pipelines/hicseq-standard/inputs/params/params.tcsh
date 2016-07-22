@@ -14,7 +14,6 @@ module load r/3.0.2
 # load tools required for each step of the pipeline (this can be overriden in local param scripts)
 module load bowtie2/2.2.6
 module load armatus/2014-05-19
-module load caltads/0.1.0
 module load ghmm/0.9
 
 # sample sheet file

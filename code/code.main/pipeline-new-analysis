@@ -43,6 +43,8 @@ endif
 rm -f data
 ln -s $pipeline_dir/data
 
+# create fastq dir
+mkdir inputs/fastq
 
 
 
