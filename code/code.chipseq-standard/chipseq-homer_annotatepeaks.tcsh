@@ -66,6 +66,10 @@ echo "pwd is $var"
 
 annotatePeaks.pl "${branch}/${objects}/peaks.bed" "$genome" -annStats $outdir/annotation_stats.txt -go $outdir/gene_ontolgy -genomeOntology $outdir/genome_ontolgy > $outdir/annotated_peaks.txt
 
+
+# convert to bed format
+pos2bed.pl $outdir/annotated_peaks.txt > $outdir/annotated_peaks.bed
+
 # without gene genome ontology:
 # annotatePeaks.pl "${branch}/${objects}/peaks.bed" "$genome" -annStats $outdir/annotation_stats.txt > $outdir/annotated_peaks.txt
 
