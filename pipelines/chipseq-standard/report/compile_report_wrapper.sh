@@ -63,7 +63,7 @@ if [ -f ${tmp_file%%.Rnw}.tex ]; then
       # gdate "$@"
       echo -e "Compiling the TeX file; file is:\n${tmp_file%%.Rnw}.tex\n\n"
       # compile with pdflatex
-      pdflatex "${tmp_file%%.Rnw}.tex" && pdflatex "${tmp_file%%.Rnw}.tex" && pdflatex "${tmp_file%%.Rnw}.tex"
+      pdflatex "${tmp_file%%.Rnw}.tex" && pdflatex "${tmp_file%%.Rnw}.tex" 
   else
       # date "$@"
       echo -e "pdflatex not installed, unable to compile file!\n"
