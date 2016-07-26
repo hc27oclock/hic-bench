@@ -311,7 +311,8 @@ done
 @
 
 % REPORT STARTS HERE!
-<<sample_sheet,results='asis',echo=FALSE,eval=TRUE>>=
+% OLD SAMPLE SHEET METHOD
+<<sample_sheet,results='asis',echo=FALSE,eval=FALSE>>=
 # print the sample sheet into the document
 PipelineSampleSheet<-read.table(file = paste(Pipeline_dir,"inputs","sample-sheet.tsv",sep = "/"),header = T,sep = "\t" )
 
@@ -336,6 +337,23 @@ for(i in seq_along(tmpdf)){
 
 # nice regex example here
 # a <- initial_data[grep("^OFB[0-9]+", names(initial_data))]   
+@
+% NEW SAMPLE SHEET METHOD
+<<sample_sheet_longtable,results='asis',echo=FALSE,eval=TRUE>>=
+# print the sample sheet into the document
+PipelineSampleSheet<-read.table(file = paste(Pipeline_dir,"inputs","sample-sheet.tsv",sep = "/"),header = T,sep = "\t" )
+
+
+# print the section heading
+cat("\\section{", "Sample Sheet", "}\n", sep="") # don't forget you need double '\\' because one gets eaten by R !!
+
+cat("\\begin{frame}[allowframebreaks]{"," Analysis Sample Sheet}\n", sep="") 
+print(xtable(x = PipelineSampleSheet[,grep("^fastq",colnames(PipelineSampleSheet),invert = T)]),
+			size="scriptsize", # LaTeX font size
+      tabular.environment="longtable",floating=FALSE
+			)
+
+cat("\\end{frame}\n\n") 
 @
 %
 <<default_params,results='asis',echo=FALSE,eval=TRUE>>=
