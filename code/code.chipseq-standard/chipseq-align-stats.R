@@ -66,7 +66,7 @@ AlignmentStats[['Pcnt.Unaligned.Reads']]<-signif(c(AlignmentStats[['Unaligned.Re
 # calculate the number of duplicated reads
 AlignmentStats[['Duplicated']]<-c(AlignmentStats[['Aligned.reads']] - AlignmentStats[['De-duplicated.alignments']])
 # calculate the percent of duplicated
-AlignmentStats[['Percent.Dup']]<-signif(c(AlignmentStats[['Duplicated']] / AlignmentStats[['Total.reads']])*100,digits = 4 )
+AlignmentStats[['Percent.Dup']]<-signif(c(AlignmentStats[['Duplicated']] / AlignmentStats[['Aligned.reads']])*100,digits = 4 )
 
 
 
