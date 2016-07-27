@@ -103,7 +103,8 @@ samtools index $outdir/alignments.bam
 scripts-send2err "Computing statistics..."
 if ("$R1" != '') then
   set R1_files = `echo $R1 | tr ',' ' '`
-  set n_reads = `cat $R1_files | gunzip | grep ^@ | wc -l`
+  set n_fastq_lines = `cat $R1_files | gunzip | wc -l`
+  set n_reads = `echo "$n_fastq_lines / 4" | bc`
 else
   set n_reads = `samtools view $BAM | wc -l`
 endif
