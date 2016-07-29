@@ -50,7 +50,7 @@ output file: chipseq_report.tex
 > quit()
 ```
 
-Compile the resulting TEX file with `pdflatex` 2 or 3 times (yes this is necessary!)
+Compile the resulting TEX file with `pdflatex` 2 times
 
 ```
 $ pdflatex chipseq_report.tex && pdflatex chipseq_report.tex
