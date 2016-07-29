@@ -28,8 +28,10 @@ Run the compile script:
 compile_report_wrapper.sh chipseq_report.Rnw
 ```
 
+OR
+
 #### Step 2b.
-Compile the report RNW file with knitr:
+Compile the report RNW file with knitr manually:
 
 ```
 $ # in terminal, start R
@@ -51,6 +53,6 @@ output file: chipseq_report.tex
 Compile the resulting TEX file with `pdflatex` 2 or 3 times (yes this is necessary!)
 
 ```
-$ pdflatex chipseq_report.tex && pdflatex chipseq_report.tex && pdflatex chipseq_report.tex
+$ pdflatex chipseq_report.tex && pdflatex chipseq_report.tex
 ```
 
