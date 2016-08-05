@@ -53,7 +53,7 @@ FASTQ_DEST_DIR="${INPUTS_DIR}/fastq"
 
 # find FASTQs in source directory and create symlinks in ./inputs/fastqs
 for SOURCE_FASTQ in $(find -L "$SOURCE_FASTQ_DIR" -type f -name "*.fastq.gz" | sort) ; do
-	
+
 	# for new fastq, remove flow cell index from the original filename (end it at R1/R2)
 	DEST_FASTQ_BASE=$(basename "$SOURCE_FASTQ")
 	DEST_FASTQ_BASE=${DEST_FASTQ_BASE/_R1_001.fastq.gz/_R1.fastq.gz}
@@ -62,14 +62,14 @@ for SOURCE_FASTQ in $(find -L "$SOURCE_FASTQ_DIR" -type f -name "*.fastq.gz" | s
 	# determine sample name (multiple steps for easy commenting and reading)
 	SAMPLE=$DEST_FASTQ_BASE
 	# 2 barcodes
-	SAMPLE=$(echo "$SAMPLE" | perl -pe 's/_[ACTG]{6,}-[ACTG]{6,}_L00[0-9]_R1.*//')
+	SAMPLE=$(echo "$SAMPLE" | perl -pe 's/_[ACTG]{6,}-[ACTG]{6,}_L00[0-9]_R[12].*//')
 	# 1 barcode
-	SAMPLE=$(echo "$SAMPLE" | perl -pe 's/_[ACTG]{4,}_L00[0-9]_R1.*//')
+	SAMPLE=$(echo "$SAMPLE" | perl -pe 's/_[ACTG]{4,}_L00[0-9]_R[12].*//')
 	# no bar codes
 	SAMPLE=$(echo "$SAMPLE" | perl -pe 's/_L00[0-9]_R[12].*//')
 	# no bar codes or lane
 	SAMPLE=$(echo "$SAMPLE" | perl -pe 's/_R[12].fastq.gz//')
-	# improper name 
+	# improper name
 	SAMPLE=$(echo "$SAMPLE" | perl -pe 's/.fastq.gz//')
 
 	# new fastq full path
