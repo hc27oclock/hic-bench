@@ -164,3 +164,5 @@ dev.off()
 # # peel off the rownames into a separate vector
 SampleName<-row.names(AlignmentStats)
 write.csv(x = cbind(SampleName,AlignmentStats), file = paste0(OutDir,"/alignment_stats_extended.csv"),quote = F,row.names = F)
+
+save.image(file=paste0(OutDir,"/data.Rdata"),compress = TRUE)
