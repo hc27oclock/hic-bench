@@ -5,7 +5,7 @@ write("Checking installation of R packages", stderr())
 # new version:
 # Bioconductor packages
 for (package in c("ChIPseeker","TxDb.Hsapiens.UCSC.hg19.knownGene","clusterProfiler","org.Hs.eg.db","wavClusteR","DiffBind",
-                  "biomaRt","ChIPpeakAnno")) {
+                  "biomaRt","ChIPpeakAnno", 'preprocessCore')) {
   # if(package %in% rownames(installed.packages()) == FALSE){install.packages(package, repos="http://cran.us.r-project.org")}
   if(package %in% rownames(installed.packages()) == FALSE){
     source("http://bioconductor.org/biocLite.R") # https:// URLs are not supported
@@ -17,7 +17,7 @@ package_list<-c("ggplot2", "grid", "plyr", "knitr", "VennDiagram",
                 "gridExtra", "datasets", "digest", "Hmisc", "xtable", "reshape2", 
                 "data.table", "scales", "corrplot", "RColorBrewer", "lattice", 
                 "gplots", "MASS", "stringr", "flsa", "genlasso", "optparse", 
-                "pastecs", "plotrix", "zoo", "reshape", "chron","UpSetR",'preprocessCore') 
+                "pastecs", "plotrix", "zoo", "reshape", "chron","UpSetR") 
 
 for(p in package_list){
   # check if the package is already installed
