@@ -21,8 +21,11 @@ mkdir -p "$backup_dir"
 basename_old_file="$(basename $file_to_backup)"
 #echo "$basename_old_file"
 
+# get the extension of the old file
+old_ext="${basename_old_file##*.}"
+
 # append the timestamp
-basename_new_file="${basename_old_file}_$(date -u +%Y%m%dt%H%M%S)"
+basename_new_file="${basename_old_file}_$(date -u +%Y%m%dt%H%M%S).${old_ext}"
 #echo "$basename_new_file"
 
 # move the old file to the backup dir
