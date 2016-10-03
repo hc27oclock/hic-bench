@@ -2,7 +2,8 @@
 
 ## USAGE: Rscript ./code/chipseq-align-stats.R $outdir $branch "$objects"
 ## DESCRIPTION: create summary tables and dual barplots to visualize alignment reads
-## 
+## This script will read in data from the alignment step for each sample and 
+## calculate the number of peaks in each category for stacked barplots
 
 # get the script arguments
 args <- commandArgs(TRUE)
@@ -27,22 +28,23 @@ Total_reads <- numeric(length(Objects))
 Aligned_reads <- numeric(length(Objects))
 De_dup_aligns <- numeric(length(Objects))
 Sample_Name <- character(length(Objects))
+Stats_df_list <- list()
 
-
-#
-##
-###
+# ~~~~~~~~~~ ## ~~~~~~~~~~ #
 # read in the stats for each alignment
 for(i in 1:length(Objects)){
   # get the sample's stats sheet
   SampleStatsSheet<-paste(Branch,as.character(Objects[i]),"stats.tsv",sep = "/")
-
+  
   # add name of the sample to vector
   Sample_Name[i]<-as.character(Objects[i])
   Total_reads[i]<-read.table(file = SampleStatsSheet,header = F,sep = "\t",row.names = 1)["Total reads",][1]
   Aligned_reads[i]<-read.table(file = SampleStatsSheet,header = F,sep = "\t",row.names = 1)["Aligned reads",][1]
   De_dup_aligns[i]<-read.table(file = SampleStatsSheet,header = F,sep = "\t",row.names = 1)["De-duplicated alignments",][1]
   tmp_rownames<-row.names(read.table(file = SampleStatsSheet,header = F,sep = "\t",row.names = 1))
+  
+  Stats_df_list[[i]] <- list(SampleName = as.character(Objects[i]),
+                             SampleData = read.table(file = SampleStatsSheet,header = F,sep = "\t",row.names = 1))
 }
 
 
@@ -52,46 +54,46 @@ colnames(AlignmentStats)<-gsub(pattern = " ",replacement = ".",x = tmp_rownames)
 cat("Alignment stats data frame is:",sep = "\n\n")
 AlignmentStats
 
-#
-##
-###
+
+# ~~~~~~~~~~ ## ~~~~~~~~~~ #
 # Calculate the percent alignment, etc.
 AlignmentStats[['Percent.Aligned.Reads']]<-signif(c(AlignmentStats[['Aligned.reads']] / AlignmentStats[['Total.reads']])*100,digits = 4 )
-# calculate the percent deduplicated
-AlignmentStats[['Percent.De-dup.Reads']]<-signif(c(AlignmentStats[['De-duplicated.alignments']] / AlignmentStats[['Total.reads']])*100,digits = 4 )
+
+# calculate the percent deduplicated; relative to the Aligned reads for the table
+AlignmentStats[['Percent.De-dup.Reads']]<-signif(c(AlignmentStats[['De-duplicated.alignments']] / AlignmentStats[['Aligned.reads']])*100,digits = 4 )
+# calculate the percent of duplicated; relative to the total reads for the plot
+AlignmentStats[['Total.Percent.De-dup']]<-signif(c(AlignmentStats[['De-duplicated.alignments']] / AlignmentStats[['Total.reads']])*100,digits = 4 )
+
 # calculate the number of unaligned reads
 AlignmentStats[['Unaligned.Reads']]<-c(AlignmentStats[['Total.reads']] - AlignmentStats[['Aligned.reads']])
 #calculate the percent unaligned reads
 AlignmentStats[['Pcnt.Unaligned.Reads']]<-signif(c(AlignmentStats[['Unaligned.Reads']] / AlignmentStats[['Total.reads']])*100,digits=4)
+
 # calculate the number of duplicated reads
 AlignmentStats[['Duplicated']]<-c(AlignmentStats[['Aligned.reads']] - AlignmentStats[['De-duplicated.alignments']])
-# calculate the percent of duplicated
+# calculate the percent of duplicated, relative to the aligned reads for the table
 AlignmentStats[['Percent.Dup']]<-signif(c(AlignmentStats[['Duplicated']] / AlignmentStats[['Aligned.reads']])*100,digits = 4 )
+# calculate the percent of duplicated; relative to the total reads for the plot
+AlignmentStats[['Total.Percent.Dup']]<-signif(c(AlignmentStats[['Duplicated']] / AlignmentStats[['Total.reads']])*100,digits = 4 )
 
 
 
-#
-##
-###
+# ~~~~~~~~~~ ## ~~~~~~~~~~ #
 # save the values to be plotted into a transposed matrix, since thats what the barplot() likes
 # # first just get the columns we want
-Dup_Raw_Reads_df<-AlignmentStats[,which(colnames(AlignmentStats) %in% c("De-duplicated.alignments","Duplicated","Unaligned.Reads")) ] 
-# reorder the columns because R is dumb
-Dup_Raw_Reads_df<-Dup_Raw_Reads_df[c("De-duplicated.alignments","Duplicated","Unaligned.Reads")]
-
+Dup_Raw_Reads_df<-AlignmentStats[c("De-duplicated.alignments","Duplicated","Unaligned.Reads") ] 
+# save as transposed matrix for the plot 
 Dup_Raw_Reads_Matrix<-t(as.matrix(Dup_Raw_Reads_df))
-# # divid the number of reads by 1million
+# # divid the number of reads by 1million for the plot
 Dup_Raw_Reads_Matrix<-signif(Dup_Raw_Reads_Matrix/1000000,digits = 4)
 
 # # first just get the columns we want
-Dup_Pcnt_Reads_df<-AlignmentStats[,which(colnames(AlignmentStats) %in% c("Percent.De-dup.Reads","Percent.Dup","Pcnt.Unaligned.Reads")) ]
-# reorder
-Dup_Pcnt_Reads_df<-Dup_Pcnt_Reads_df[c("Percent.De-dup.Reads","Percent.Dup","Pcnt.Unaligned.Reads")]
+Dup_Pcnt_Reads_df <- AlignmentStats[c('Total.Percent.De-dup','Total.Percent.Dup',"Pcnt.Unaligned.Reads") ]
+# save as transposed matrix for the plot 
 Dup_Pcnt_Reads_Matrix<-t(as.matrix(Dup_Pcnt_Reads_df))
 
-#
-##
-###
+
+# ~~~~~~~~~~ ## ~~~~~~~~~~ #
 # Set up the plots
 BARPLOT_COLORS<-c("blue","purple","red")
 
@@ -130,9 +132,8 @@ cat("mar_widthLeft is ",mar_widthLeft,"",sep = "\n")
 cat("Names_scale is ",Names_scale,"",sep = "\n")
 cat("Space_scale is ",Space_scale,sep = "\n")
 
-#
-##
-###
+
+# ~~~~~~~~~~ ## ~~~~~~~~~~ #
 # write a PDF of the plot
 # pdf(file = paste0(OutDir,"/alignment_barplots",mar_divisor,"-",mar_widthLeft,".pdf"),width = 8,height = 8) # ORIGINAL
 pdf(file = paste0(OutDir,"/alignment_barplots.pdf"),width = 8,height = 9)
@@ -150,19 +151,20 @@ legend("bottom",legend=c("Deduplicated","Duplicated","Unaligned"),fill=BARPLOT_C
 par(mar=c(6,mar_widthLeft,0,3)+ 0.1) 
 
 # create barplot for the two matrices
-# barplot(Dup_Raw_Reads_Matrix,horiz = T,col=BARPLOT_COLORS,border=NA,las=1,cex.names=0.7,xlab="Number of reads (millions)") 
+# without scaling factors:
+# barplot(Dup_Raw_Reads_Matrix,horiz = T,col=BARPLOT_COLORS,border=NA,las=1,cex.names=0.7,xlab="Number of reads (millions)")
 # barplot(Dup_Pcnt_Reads_Matrix,horiz = T,col=BARPLOT_COLORS,border=NA,las=1,cex.names=0.7,xlab="Percent of reads")
+# with scaling factors:
 barplot(Dup_Raw_Reads_Matrix,horiz = T,col=BARPLOT_COLORS,border=NA,las=1,cex.names=Names_scale,xlab="Number of reads (millions)",space=Space_scale) 
 barplot(Dup_Pcnt_Reads_Matrix,horiz = T,col=BARPLOT_COLORS,border=NA,las=1,cex.names=Names_scale,xlab="Percent of reads",space=Space_scale)
 
 dev.off()
 
-#
-##
-###
+
+# ~~~~~~~~~~ ## ~~~~~~~~~~ #
 # write a CSV of the final table
 # # peel off the rownames into a separate vector
 SampleName<-row.names(AlignmentStats)
 write.csv(x = cbind(SampleName,AlignmentStats), file = paste0(OutDir,"/alignment_stats_extended.csv"),quote = F,row.names = F)
-
+# save the session data 
 save.image(file=paste0(OutDir,"/data.Rdata"),compress = TRUE)
