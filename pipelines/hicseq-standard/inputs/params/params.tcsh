@@ -8,8 +8,7 @@ module unload python
 module load samtools/1.2.1
 module load bedtools/2.22.0
 module load java/1.8
-module load picard-tools/1.88
-module load r/3.3.1
+module load r/3.3.0
 
 # load tools required for each step of the pipeline (this can be overriden in local param scripts)
 module load bowtie2/2.2.6

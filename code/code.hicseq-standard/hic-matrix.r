@@ -1217,6 +1217,8 @@ op_stats <- function(cmdline_args)
   for (k in 1:nrow(D)) lines(d,D[k,],col=colors[k])
   plot(1, type = "n", axes=FALSE, xlab="", ylab="")
   legend(x='top',cex=0.70,legend=sample_labels,col=colors,lwd=2)
+  colnames(D) = d
+  write.table(cbind(sample_labels,D),file=paste(out_dir,'/stats.tsv',sep=''),row.names=FALSE,col.names=TRUE,quote=FALSE,sep='\t')
   dev.off()  
 
   quit(save='no')
@@ -2043,7 +2045,7 @@ IdentifyDomains = function(est, opt, full_matrix)
   
   # start
   if (opt$verbose) write('Using new method for TAD calling...',stderr())
-  n_iterations = 2                                   # number of randomizations
+  n_iterations = 20                                  # number of randomizations
   n_matrices = dim(est$solObj)[1]                    # number of matrices (i.e. number of lambda values)
   n_rows = nrow(est$y)
   n_cols = ncol(est$y)
