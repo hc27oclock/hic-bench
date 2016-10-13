@@ -17,9 +17,6 @@ set r = ($2)
 set g = $3     # genomes/mm10/genome.bed
 set b = $4     # 50000
 
-# Load required module
-module load tabix/0.2.6
-
 # Create genome matrix
 cat $r | gunzip | gtools-hic bin -v --bin-size $b -g $g --matrix | gtools-hic convert >! $out/track.washu.tsv
 

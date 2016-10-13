@@ -5,7 +5,7 @@ module unload samtools
 module unload java
 module unload gcc
 module unload python
-module load samtools/1.2.1
+module load samtools/1.3
 module load bedtools/2.22.0
 module load java/1.8
 module load r/3.3.0
