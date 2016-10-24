@@ -1848,7 +1848,7 @@ LoadEstimation = function(filename, options, replace.na)
     if (is.null(ignored_cols)) { est$ignored_cols = integer(0) } else { est$ignored_cols = sort(unique(ignored_cols)) }
     if (opt$"max-lambda"==Inf) {                      # extract specific lambdas (found in options) if max-lambda=Inf
       # create gamma/lambda values (zero always included if log2 scale)
-      est$gammas = opt$gammas
+      est$gammas = opt$gamma
       if (options$"log2-lambda"==FALSE) { lambdas = unique(seq(options$"min-lambda",options$"max-lambda",length.out=options$"n-lambda"))
       } else { lambdas = unique(c(0,2^seq(log2(max(options$"min-lambda",0.01)),log2(options$"max-lambda"),length.out=options$"n-lambda"-1))) }
       est$lambdas = lambdas
