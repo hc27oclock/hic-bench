@@ -226,7 +226,7 @@ MatrixBoundaryScores <- function(x,distance,d2,skip,ignore)
   x[abs(row(x)-col(x))>distance] = 0   # values beyond distance cutoff are set to zero
   if (d2<=0) d2 = distance
   n = nrow(x)
-  labels = c('intra-left','intra-right','intra-max','intra-min','inter','diff','DI','ratio','diffratio','product-max','product-min')
+  labels = c('intra-left','intra-right','intra-max','intra-min','inter','diff','DI','ratio','diffratio','product-max','product-min','intra-sum')
   scores = matrix(0,n,length(labels))
   colnames(scores) = labels
   rownames(scores) = rownames(x)
@@ -268,6 +268,7 @@ MatrixBoundaryScores <- function(x,distance,d2,skip,ignore)
     # scores
     scores[i,'intra-left'] = intra_left
     scores[i,'intra-right'] = intra_right
+    scores[i,'intra-sum'] = intra_left + intra_right
     scores[i,'intra-max'] = intra_max                             # max of left/right values
     scores[i,'intra-min'] = intra_min                             # min of left/right values
     scores[i,'inter'] = inter                                     # mean of values at boundary square
@@ -2116,7 +2117,7 @@ op_domains <- function(cmdline_args)
     make_option(c("--distance"), default=5, help="Distance from diagonal (in number of bins) used for boundary score computation [default \"%default\"]."),
     make_option(c("--distance2"), default=0, help="Distance from diagonal (in number of bins) used for boundary score computation [default \"%default\"]."),
     make_option(c("--skip-distance"), default=1, help="Distance from diagonal (in number of bins) to be skipped [default \"%default\"]."),
-    make_option(c("--method"), default="ratio", help="Boundary score method: ratio, diffratio, intra-max, intra-min, intra-right, intra-left, inter, diff, DI, product-max, product-min [default \"%default\"]."),
+    make_option(c("--method"), default="ratio", help="Boundary score method: ratio, diffratio, intra-max, intra-min, intra-right, intra-left, intra-sum, inter, diff, DI, product-max, product-min [default \"%default\"]."),
     make_option(c("--slope"), default=1.1, help="Local maxima should be at least <slope> times above nearby minima [default \"%default\"]."),
     make_option(c("--fdr"), default=1.0, help="False discovery rate cutoff [default \"%default\"]."),
     make_option(c("--flank-dist"), default=10, help="Local maxima neighborhood radius (in number of bins) [default \"%default\"]."),

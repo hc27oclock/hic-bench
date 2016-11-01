@@ -15,14 +15,16 @@ set jobs_script = $1
 set max_jobs = $2
 if ($max_jobs == "") set max_jobs = `cat $jobs_script | wc -l`
 
+
 if (`cat $jobs_script | wc -l` > 0) then
-  set pref = __run_
+  set script_dir = `readlink -f $jobs_script | sed 's/\/[^/]\+$//'`
+  set pref = $script_dir/__run_
   rm -f ${pref}*
   split -a 10 -l $max_jobs $jobs_script $pref
   foreach run (${pref}*)
     scripts-send2err "Running $run script..."
-    chmod +x ./$run
-    set jid = `./$run`
+    chmod +x $run
+    set jid = `$run`
     scripts-send2err "Waiting for all jobs [$jid] to complete..."
     scripts-qsub-wait "$jid"
   end

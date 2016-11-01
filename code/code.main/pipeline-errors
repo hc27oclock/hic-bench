@@ -2,7 +2,7 @@
 source ./code/code.main/custom-tcshrc      # customize shell environment
 
 ##
-## USAGE: pipeline-errors INPUT-DIR
+## USAGE: pipeline-errors INPUT-DIRS
 ##
 
 if ($#argv != 1) then
@@ -10,7 +10,7 @@ if ($#argv != 1) then
   exit
 endif
 
-set inpdir = $1
+set inpdirs = "$1"
 set outdir = errors
 
 if (-e $outdir) rm -rf $outdir
@@ -18,6 +18,6 @@ if (-e $outdir) rm -rf $outdir
 mkdir -p $outdir
 
 # first check job stderr output files
-find $inpdir/ -name 'job.*' -print0 | xargs -0 grep -iwE 'usage|error|segmentation|not found|join.*sort|no such file|syntax|terminate|permission denied' | grep -vE 'Tcl command execution failed|Module .* conflicts with the currently loaded module|Module .* depends on one of the module|will result in an error in the future' >&! $outdir/error.log
+find $inpdirs -name 'job.*' -print0 | xargs -0 grep -iwE 'usage|error|segmentation|not found|join.*sort|no such file|syntax|terminate|permission denied' | grep -vE 'Tcl command execution failed|Module .* conflicts with the currently loaded module|Module .* depends on one of the module|will result in an error in the future' >&! $outdir/error.log
 
 
