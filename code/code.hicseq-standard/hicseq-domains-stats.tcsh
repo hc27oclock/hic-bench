@@ -30,12 +30,15 @@ scripts-create-path $outdir/
 # Isolate all the kappas
 set kappas = `ls -1 $branch/*/domains.*.bed | sed 's/.*\///' | cut -d'.' -f2 | sort -u`
 
+# Identify object directories
+set obj_dirs = `echo $objects | tr ' ' '\n' | awk -v x=$branch '{ print x "/" $1 }'`
+
 # Call the Rscript that plots the domain numbers and
 # domain distribution for each one of the kappas (lambdas)
 # separetely
 foreach kappa ($kappas)
 	echo $kappa
-        Rscript ./code/plot-domains-stats.r $outdir $branch $kappa
+  Rscript ./code/plot-domains-stats.r $outdir "$obj_dirs" $kappa
 end
 
 # Call the script that outputs the domain stats

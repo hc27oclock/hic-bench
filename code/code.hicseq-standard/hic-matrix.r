@@ -642,7 +642,7 @@ op_estimate <- function(cmdline_args)
   }
     
   # preprocess input matrix
-  y = PreprocessMatrix(x,preprocess=preprocess,pseudo=pseudo,cutoff=min_hicscore)
+  y = PreprocessMatrix(x,preprocess=preprocess,pseudo=pseudo,cutoff=min_hicscore,max_dist=zone_size)
   
   # create lambda values (zero always included if log2 scale)
   if (max_lambda==Inf) { lambdas = NULL; 
@@ -2046,7 +2046,7 @@ IdentifyDomains = function(est, opt, full_matrix)
   
   # start
   if (opt$verbose) write('Using new method for TAD calling...',stderr())
-  n_iterations = 20                                  # number of randomizations
+  n_iterations = 5                                   # number of randomizations
   n_matrices = dim(est$solObj)[1]                    # number of matrices (i.e. number of lambda values)
   n_rows = nrow(est$y)
   n_cols = ncol(est$y)
@@ -2499,24 +2499,27 @@ op_bdiff <- function(cmdline_args)
 		# process data
 		if (opt$verbose) write("Identifying boundary changes (using new method)...",stderr())
     zscores = {}                                         # scores converted to z-scores
-#    pscores = {}                                         # scores converted to percentiles
-    for (f in 1:length(files)) { 
-      zscores[[f]] = apply(scores[[f]], 2, function(x) (x-mean(x[boundaries],na.rm=T))/sd(x[boundaries],na.rm=T))
-#      pscores[[f]] = apply(scores[[f]], 2, function(x) rank(x,na.last=TRUE,ties.method="average")/length(x))
+    for (f in 1:length(files)) { zscores[[f]] = apply(scores[[f]], 2, function(x) (x-mean(x[boundaries],na.rm=T))/sd(x[boundaries],na.rm=T)) }
+#    zscore_diff = zscores[[2]][,opt$method]-zscores[[1]][,opt$method]
+    score_diff = {}
+    for (m in c('intra-left','intra-right','intra-max',opt$method)) {
+      score_diff[[m]] = (1.0 - pmin(scores[[1]][,m],scores[[2]][,m]) / pmax(scores[[1]][,m],scores[[2]][,m])) * sign(scores[[2]][,m]-scores[[1]][,m])
     }
-    bdiff = which( boundaries & (zscores[[1]][,'intra-max']>=opt$z1) & (zscores[[2]][,'intra-max']>=opt$z1) & (abs(zscores[[1]][,opt$method]-zscores[[2]][,opt$method])>=opt$z2) )
+    bdiff = which( boundaries & (zscores[[1]][,'intra-max']>=opt$z1) & (zscores[[2]][,'intra-max']>=opt$z1) & (abs(score_diff[[opt$method]])>=opt$z2) )
 		if (opt$verbose) write(paste('TAD changes = ',length(bdiff),sep=''),stderr())
 
 		# storing results
 		if (opt$verbose) { write("Storing results...",stderr()); }
     table = cbind(names(lmax[[1]]),lmax[[1]],lmax[[2]])
 		colnames(table) = c('locus','sample1-boundary','sample2-boundary')
-    for (m in c('intra-left','intra-right',opt$method)) {
-#      table = cbind(table,round(pscores[[1]][,m],3),round(pscores[[2]][,m],3))
-#      colnames(table)[(ncol(table)-1):ncol(table)] = c(paste('sample1-',m,'-pscore',sep=''),paste('sample2-',m,'-pscore',sep=''))
+    for (m in c('intra-left','intra-right','intra-max',opt$method)) {
       table = cbind(table,round(zscores[[1]][,m],3),round(zscores[[2]][,m],3))
       colnames(table)[(ncol(table)-1):ncol(table)] = c(paste('sample1-',m,'-zscore',sep=''),paste('sample2-',m,'-zscore',sep=''))
+      table = cbind(table,round(score_diff[[m]],3))
+      colnames(table)[ncol(table)] = paste(m,'-diff',sep='')
     }
+    table = cbind(table,round(scores[[1]][,opt$method],3),round(scores[[2]][,opt$method],3))
+    colnames(table)[(ncol(table)-1):ncol(table)] = c(paste('sample1-',opt$method,'-score',sep=''),paste('sample2-',opt$method,'-score',sep=''))
     table = table[bdiff,,drop=FALSE]
 		write.table(table,col.names=T,row.names=F,quote=F,sep='\t',file=paste(out_dir,'/table.k=',formatC(ll,width=3,format='d',flag='0'),'.tsv',sep=''))
 		

@@ -46,8 +46,8 @@ foreach k ($K)
   foreach tt ($outdir/*/$t)
     cat $tt | sed '1d' >> $outdir/$t
   end
-  cat $outdir/$t | sed '1d' | awk '$9>$8' | cut -f1 | tr ':-' '\t' | gtools-regions shiftp -5p -1 -3p 0 >! $outdir/boundary_gain.k=$k.bed
-  cat $outdir/$t | sed '1d' | awk '$8>$9' | cut -f1 | tr ':-' '\t' | gtools-regions shiftp -5p -1 -3p 0 >! $outdir/boundary_loss.k=$k.bed  
+  cat $outdir/$t | sed '1d' | awk '$15>0' | cut -f1 | tr ':-' '\t' | gtools-regions shiftp -5p -1 -3p 0 >! $outdir/boundary_gain.k=$k.bed
+  cat $outdir/$t | sed '1d' | awk '$15<0' | cut -f1 | tr ':-' '\t' | gtools-regions shiftp -5p -1 -3p 0 >! $outdir/boundary_loss.k=$k.bed  
 end
 
 # -------------------------------------

@@ -3,7 +3,7 @@
 write("Checking installation of R packages", stderr())
 
 
-packages = c("flsa", "genlasso", "optparse", "ggplot2", "pastecs", "plotrix",
+packages = c("igraph", "flsa", "genlasso", "optparse", "ggplot2", "pastecs", "plotrix",
              "reshape2", "zoo", "plyr", "data.table", "gridExtra", "scales", "grid",
              "RColorBrewer", "stringr", "chron", "corrplot")
 

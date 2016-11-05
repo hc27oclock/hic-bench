@@ -18,7 +18,7 @@ set genome = $1
 # create sample sheet
 set inpdir = fastq
 set sheet = sample-sheet.tsv
-echo "sample group fastq-r1 fastq-r2 genome enzyme" | tr ' ' '\t' >! $sheet
+echo "sample group fastq-r1 fastq-r2 genome enzyme cell-type" | tr ' ' '\t' >! $sheet
 foreach sample (`cd $inpdir; ls -1d *`)
   scripts-send2err "Importing sample $sample..."
   set group = `echo $sample | cut -d'-' -f-2`
@@ -33,7 +33,8 @@ foreach sample (`cd $inpdir; ls -1d *`)
   else 
     set enzyme = NA
   endif
-  echo "$sample\t$group\t`echo $fastq1 | tr ' ' ','`\t`echo $fastq2 | tr ' ' ','`\t$genome\t$enzyme" >> $sheet
+  set cell_type = `echo $sample | cut -d'-' -f1`
+  echo "$sample\t$group\t`echo $fastq1 | tr ' ' ','`\t`echo $fastq2 | tr ' ' ','`\t$genome\t$enzyme\t$cell_type" >> $sheet
 end
 
 echo "Your sample sheet has been created! Here is how it looks:"

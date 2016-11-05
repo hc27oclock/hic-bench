@@ -1,10 +1,13 @@
 #!/bin/tcsh
 
-# load basic tools
+# unload
 module unload samtools
 module unload java
 module unload gcc
 module unload python
+module unload r
+
+# load basic tools
 module load samtools/1.3
 module load bedtools/2.22.0
 module load java/1.8

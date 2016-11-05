@@ -17,17 +17,14 @@ library(scales)
 args <- commandArgs(trailingOnly=TRUE)
 
 # Usage
-if (length(args)!=3){print("USAGE: plot-domains-stats.R OUTPUT-DIR INPUT-DIR KAPPA"); quit(save="no")}
+if (length(args)!=3){print("USAGE: plot-domains-stats.R OUTPUT-DIR INPUT-DIRECTORIES KAPPA"); quit(save="no")}
 
 # Get the arguments
 output <- args[1]
-input  <- args[2]
+dirs  <- unlist(strsplit(args[2],' '))
 kappa  <- args[3]
 
-file <- paste(input,'*',sprintf("domains.%s.bed", kappa),sep="/")
-
-dirs  <- system(sprintf("ls -d %s/*", input), intern=TRUE)
-files <- system(sprintf("ls -1 %s", file), intern=TRUE)
+files <- paste(dirs,sprintf("domains.%s.bed", kappa),sep="/")
 
 # Get the file number
 file_no <- length(unique(files))
