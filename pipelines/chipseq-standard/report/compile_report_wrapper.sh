@@ -17,17 +17,18 @@ fi
 # get script arg
 tmp_file="$1"
 
+# DONT DO THIS IT BREAKS FIND A BETTER WAY
 # if 'module' commands work, then load correct R version
-if module unload r; then
-  echo -e "Loading R module"
-  module switch r/3.3.0
-  echo -e "Rscript version is:"
-  $(Rscript --version)
-else
-  echo "'module' not available, can't guarantee that R v3.2.3 will be loaded" # update this in the future, call this version directly somehow
-  echo -e "Rscript version is:"
-  $(Rscript --version)
-fi
+# if module unload r; then
+#   echo -e "Loading R module"
+#   module switch r/3.3.0
+#   echo -e "Rscript version is:"
+#   $(Rscript --version)
+# else
+#   echo "'module' not available, can't guarantee that R v3.2.3 will be loaded" # update this in the future, call this version directly somehow
+#   echo -e "Rscript version is:"
+#   $(Rscript --version)
+# fi
 
 # compile the document with knitr
 # you must have knitr installed already !!
@@ -47,12 +48,6 @@ Rscript --slave --no-save --no-restore - "$1" <<EOF
   cat("Compiling document with knitr\n")
   knit(args[1])
 EOF
-
-
-# btw here are some other ways to pass heredoc to R
-# R --slave <<EOF
-# Rscript --slave --vanilla - <<EOF
-
 
 # PDF compilation with pdflatex
 # check if the .tex file exists; 
