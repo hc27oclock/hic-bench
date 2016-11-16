@@ -11,10 +11,12 @@ ChIP-Seq pipeline usage follows the same structure and format as the HiC pipleli
 If a new analysis project has not already been created, do so with the following command:
 
 ```
-~/pipeline-master/code/code.main/pipeline-new-analysis chipseq-standard /path/to/<project_directory>
+~/hic-bench/code/code.main/pipeline-new-analysis chipseq-standard /path/to/<project_directory>
 ```
 
 ## 1. Set input files
+
+### Option 1: manual
 
 Within the corresponding `<project_directory>/inputs/fastq` or `<project_directory>/inputs/bam` directory, subdirectories should be created with the name of each sample to be included in the analysis. The following naming scheme is preferable:
 
@@ -25,6 +27,14 @@ Each subdirectory should contain all fastq or bam files to be used for that samp
 *QQ: Include sample directory file structures*
 *QQ: Include sample code for creating symlinks and dirs?*
 *QQ: treatment of special characters, etc., in file/dir names*
+
+### Option 2: automatic (may fail with certain file names)
+
+From the project directory directory, run:
+```
+./code/setup-sample-files.sh <fastq_source_dir>
+```
+This will scan the given directory and create symlinks to any found FASTQs in `./inputs/fastq`. It will also clean up file names if they are in the standard Illumina bcl2fastq structure so they can be recognized by `create-sample-sheet.tcsh` (next step). It can be run multiple times to scan multiple directories, but outputs may get overwritten if the sample names are the same. Found FASTQs are printed to keep track of what is happening.
 
 ## 2. Create project sample sheet
 
