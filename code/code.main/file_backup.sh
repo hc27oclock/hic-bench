@@ -2,7 +2,9 @@
 
 
 ## USAGE: file_backup.sh <file_to_backup> <backup_output_dirname>
-
+## EXAMPLE: file_backup.sh file_to_keep.txt old
+## DESCRIPTION: this is Steve's handy script for stashing old files that you don't want to delete because he's a packrat that hates deleting files they might be useful again someday
+## backup dir is automatically created and file_to_keep is moved there with a timestamped filename
 
 # ~~~~~~ script args processing ~~~~~~ #
 # # if not enough args, output USAGE info lines (which start with '##') and exit
