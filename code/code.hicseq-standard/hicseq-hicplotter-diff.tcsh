@@ -95,7 +95,7 @@ foreach region ($regions)
   #Get all bedgraphs
   set bedgraph_files = ()
   set domain_files = `echo $beds`
-  set sample_labels = "$object1 $object2"
+  set sample_labels = "$object2 $object1"
   #Get all bedgraph labels
   set bedgraph_files_labels = ()
 
@@ -116,28 +116,14 @@ foreach region ($regions)
   endif
   set hicplotter_abs_path = `readlink -f $hicplotter_path`
   cd $workdir
-  set extension = ( pdf png )
-  foreach filetype ($extension)
-    python $hicplotter_abs_path -v -f $hic_matrices -n $sample_labels -chr $chrom -s $start_bin -e $stop_bin -r $bin_size -o $region -hist $bedgraph_files -hl $bedgraph_files_labels -hc FF0000,0000FF FF0000,0000FF -fh $fileheader -ext $filetype -high $highlight_opt -c $compare -p $pair -ptr 1 -trh 25 -spi 1 -si 1 -pdb $domainbars -pcd 1 -pcdf $domain_files -g $gene_path
+  foreach filetype (pdf png)
+    python $hicplotter_abs_path -v -f $hic_matrices -n $sample_labels -chr $chrom -s $start_bin -e $stop_bin -r $bin_size -o $region -hist $bedgraph_files -hl $bedgraph_files_labels -hc FF0000,0000FF FF0000,0000FF -fh $fileheader -ext $filetype -high $highlight_opt -c $compare -p $pair -ptr 1 -trh 25 -spi 1 -si 1 -pdb $domainbars -pcd 1 -pcdf $domain_files #-g $gene_path
+    foreach fout (chr*.$filetype)
+      mv -f $fout $p/$outdir/`echo $fout | tr ':' ' ' | tr '-' ' ' | awk -F" " '{print $1":"$2"-"$3}'`.$filetype
+    end
   end
   cd $p
 end
-
-# Move all the .pdf and .png files to output directory
-foreach f (`cd $workdir; ls -1 chr*.pdf`)
-  mv -f $workdir/$f $outdir/`echo $f | tr ':' ' ' | tr '-' ' ' | awk -F" " '{print $1":"$2"-"$3}'`.pdf
-end
-
-foreach f (`cd $workdir; ls -1 chr*.png`)
-  mv -f $workdir/$f $outdir/`echo $f | tr ':' ' ' | tr '-' ' ' | awk -F" " '{print $1":"$2"-"$3}'`.png
-end
-
-# Set the pdfs in order
-#set p = `pwd`
-#cd $outdir
-#set pdfs = `echo $regions | sed 's/$/ /' | sed 's/ /.pdf /g'` 
-#$pdftk_path/pdftk $pdfs cat output plots.pdf
-#cd $p
 
 # Cleanup
 #rm -rf $workdir

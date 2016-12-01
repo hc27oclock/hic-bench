@@ -2079,10 +2079,11 @@ IdentifyDomains = function(est, opt, full_matrix)
     dom$bscores[,k] = compute_scores(z,opt,est$ignored_rows)
 
     # identify boundary score cutoff
-    bscore_cutoff = calc_bscore_cutoff(dom$bscores[,k],opt,est$ignored_rows,n_iterations)
+    bscore_cutoff = opt$cutoff
+    if (opt$fdr<1) bscore_cutoff = max(bscore_cutoff, calc_bscore_cutoff(dom$bscores[,k],opt,est$ignored_rows,n_iterations))
     
     # identify boundaries as local maxima of boundary scores
-    if (opt$verbose) write('Identifying domain boundaries at specified FDR...',stderr())
+    if (opt$verbose) write('Identifying domain boundaries at specified FDR/cutoff...',stderr())
     dom$E[,k] = find_boundaries(dom$bscores[,k],opt,bscore_cutoff)
     if (opt$verbose) write(paste('Identified ',sum(dom$E[,k]),' domain boundaries.',sep=''),stderr())
   }
@@ -2120,6 +2121,7 @@ op_domains <- function(cmdline_args)
     make_option(c("--method"), default="ratio", help="Boundary score method: ratio, diffratio, intra-max, intra-min, intra-right, intra-left, intra-sum, inter, diff, DI, product-max, product-min [default \"%default\"]."),
     make_option(c("--slope"), default=1.1, help="Local maxima should be at least <slope> times above nearby minima [default \"%default\"]."),
     make_option(c("--fdr"), default=1.0, help="False discovery rate cutoff [default \"%default\"]."),
+    make_option(c("--cutoff"), default=-Inf, help="Boundary score cutoff [default \"%default\"]."),
     make_option(c("--flank-dist"), default=10, help="Local maxima neighborhood radius (in number of bins) [default \"%default\"]."),
     make_option(c("--track-dist"), default=10, help="Maximum distance (number of bins) from diagonal for track generation  [default=%default]."),
     make_option(c("--bins"), default="", help="Comma-separated bins to be highlighted [default \"%default\"]."),
@@ -2434,6 +2436,7 @@ op_bdiff <- function(cmdline_args)
     make_option(c("--skip-distance"), default=1, help="Distance from diagonal (in number of bins) to be skipped [default \"%default\"]."),
     make_option(c("--slope"), default=1.1, help="Local maxima should be at least <slope> times above nearby minima [default \"%default\"]."),
     make_option(c("--fdr"), default=1.0, help="False discovery rate cutoff [default \"%default\"]."),
+    make_option(c("--cutoff"), default=-Inf, help="Boundary score cutoff [default \"%default\"]."),
     make_option(c("--z1"), default=1.0, help="Minimum z-score cutoff for calling activated domains [default \"%default\"]."),
     make_option(c("--z2"), default=0.5, help="Minimum z-score change for calling differential boundaries [default \"%default\"]."),
     make_option(c("--flank-dist"), default=10, help="Local maxima neighborhood radius (in number of bins) [default \"%default\"]."),
@@ -2500,12 +2503,20 @@ op_bdiff <- function(cmdline_args)
 		if (opt$verbose) write("Identifying boundary changes (using new method)...",stderr())
     zscores = {}                                         # scores converted to z-scores
     for (f in 1:length(files)) { zscores[[f]] = apply(scores[[f]], 2, function(x) (x-mean(x[boundaries],na.rm=T))/sd(x[boundaries],na.rm=T)) }
-#    zscore_diff = zscores[[2]][,opt$method]-zscores[[1]][,opt$method]
+    zscore_diff = {}
     score_diff = {}
     for (m in c('intra-left','intra-right','intra-max',opt$method)) {
+      zscore_diff[[m]] = zscores[[2]][,m]-zscores[[1]][,m]
       score_diff[[m]] = (1.0 - pmin(scores[[1]][,m],scores[[2]][,m]) / pmax(scores[[1]][,m],scores[[2]][,m])) * sign(scores[[2]][,m]-scores[[1]][,m])
     }
-    bdiff = which( boundaries & (zscores[[1]][,'intra-max']>=opt$z1) & (zscores[[2]][,'intra-max']>=opt$z1) & (abs(score_diff[[opt$method]])>=opt$z2) )
+
+    # fold-change
+    f = function(S) { S[,'intra-sum']/S[,'inter'] }
+    fold_change = log2(f(scores[[2]])/f(scores[[1]]))    
+    fold_change[is.na(fold_change)] = 0
+    
+    # identify differential boundarie
+    bdiff = which( boundaries & (zscores[[1]][,'intra-max']>=opt$z1) & (zscores[[2]][,'intra-max']>=opt$z1) & (abs(zscore_diff[[opt$method]])>=opt$z2) )
 		if (opt$verbose) write(paste('TAD changes = ',length(bdiff),sep=''),stderr())
 
 		# storing results
@@ -2515,13 +2526,18 @@ op_bdiff <- function(cmdline_args)
     for (m in c('intra-left','intra-right','intra-max',opt$method)) {
       table = cbind(table,round(zscores[[1]][,m],3),round(zscores[[2]][,m],3))
       colnames(table)[(ncol(table)-1):ncol(table)] = c(paste('sample1-',m,'-zscore',sep=''),paste('sample2-',m,'-zscore',sep=''))
+      table = cbind(table,round(zscore_diff[[m]],3))
+      colnames(table)[ncol(table)] = paste(m,'-zdiff',sep='')
       table = cbind(table,round(score_diff[[m]],3))
       colnames(table)[ncol(table)] = paste(m,'-diff',sep='')
     }
     table = cbind(table,round(scores[[1]][,opt$method],3),round(scores[[2]][,opt$method],3))
     colnames(table)[(ncol(table)-1):ncol(table)] = c(paste('sample1-',opt$method,'-score',sep=''),paste('sample2-',opt$method,'-score',sep=''))
+    table = cbind(table,round(fold_change,3))
+    colnames(table)[ncol(table)] = 'log2-fold'
+		write.table(table,col.names=T,row.names=F,quote=F,sep='\t',file=paste(out_dir,'/all_data.k=',formatC(ll,width=3,format='d',flag='0'),'.tsv',sep=''))
     table = table[bdiff,,drop=FALSE]
-		write.table(table,col.names=T,row.names=F,quote=F,sep='\t',file=paste(out_dir,'/table.k=',formatC(ll,width=3,format='d',flag='0'),'.tsv',sep=''))
+		write.table(table,col.names=T,row.names=F,quote=F,sep='\t',file=paste(out_dir,'/bdiff.k=',formatC(ll,width=3,format='d',flag='0'),'.tsv',sep=''))
 		
 		# generate snapshots
 		if (length(bdiff)!=0) {

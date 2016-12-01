@@ -39,16 +39,21 @@ foreach f (`cd $branch/$object1; ls -1 matrix.*.tsv matrix.*.RData | grep -vwE "
 end
 
 # Collect diff-domains from all chromosomes
-set K = `ls -1 $outdir/*/table.k=*.tsv | sed 's/.*\/table.k=//' | cut -d'.' -f1 | sort -u`
+set K = `ls -1 $outdir/*/bdiff.k=*.tsv | sed 's/.*\/bdiff.k=//' | cut -d'.' -f1 | sort -u`
 foreach k ($K)
-  set t = table.k=$k.tsv
-  cat $outdir/*/$t | head -1 >! $outdir/$t
-  foreach tt ($outdir/*/$t)
-    cat $tt | sed '1d' >> $outdir/$t
+  foreach t (bdiff.k=$k.tsv all_data.k=$k.tsv)
+    cat $outdir/*/$t | head -1 >! $outdir/$t
+    foreach tt ($outdir/*/$t)
+      cat $tt | sed '1d' >> $outdir/$t
+    end
   end
-  cat $outdir/$t | sed '1d' | awk '$15>0' | cut -f1 | tr ':-' '\t' | gtools-regions shiftp -5p -1 -3p 0 >! $outdir/boundary_gain.k=$k.bed
-  cat $outdir/$t | sed '1d' | awk '$15<0' | cut -f1 | tr ':-' '\t' | gtools-regions shiftp -5p -1 -3p 0 >! $outdir/boundary_loss.k=$k.bed  
+  set score_col = `head -1 $outdir/bdiff.k=$k.tsv | tr '\t' '\n' | grep -n '^ratio-zdiff$' | cut -d':' -f1`
+  cat $outdir/bdiff.k=$k.tsv | sed '1d' | cut -f1,$score_col | awk '$2>0' | sed 's/:/\t/' | sed 's/-/\t/' | gtools-regions shiftp -5p -1 -3p 0 >! $outdir/boundary_gain.k=$k.bed
+  cat $outdir/bdiff.k=$k.tsv | sed '1d' | cut -f1,$score_col | awk '$2<0' | sed 's/:/\t/' | sed 's/-/\t/' | gtools-regions shiftp -5p -1 -3p 0 >! $outdir/boundary_loss.k=$k.bed
 end
+
+# cleanup
+rm -rf $outdir/*/*.RData $outdir/*/*.tsv
 
 # -------------------------------------
 # -----  MAIN CODE ABOVE --------------
