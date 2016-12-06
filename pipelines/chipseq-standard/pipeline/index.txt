@@ -6,6 +6,7 @@ qc
 
 peaks
 peaktable
+count_peaks
 
 matrices
 
