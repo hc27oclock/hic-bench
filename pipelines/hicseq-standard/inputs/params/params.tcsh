@@ -8,7 +8,7 @@ module unload python
 module unload r
 
 # load basic tools
-module load python/2.7.3
+#module load python/2.7.3
 module load samtools/1.3
 module load bedtools/2.22.0
 module load java/1.8
