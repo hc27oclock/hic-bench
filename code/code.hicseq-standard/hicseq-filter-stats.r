@@ -21,10 +21,6 @@ library(ggplot2)
 library(RColorBrewer)
 library(grid)
 
-mycolors1 <- c("#33a02c","#b2df8a","#e31a1c","#fb9a99","#a6cee3","#1f78b4","#fdbf6f","#ff7f00","#cab2d6","#6a3d9a","#ffff99","#b15928","#000000")
-mycolors2 <- c("#33a02c","#b2df8a")
-
-
 # Read arguments
 args <- commandArgs(TRUE)
 output <- sprintf("%s", args[1])
@@ -51,25 +47,26 @@ total$SAMPLE <- factor(total$SAMPLE)
 read_category_no <- length(unique(total$READ_CATEGORY))
 
 # Assign color palette based on category number
-if(read_category_no > 2){mycolors <- mycolors1}else{mycolors <- mycolors2}
- 
+my_classes = c("ds-accepted-intra","ds-accepted-inter","ds-duplicate-intra","ds-duplicate-inter","multihit","single-sided","ds-no-fragment","ds-same-fragment","ds-too-close","ds-too-far","unpaired","unmapped","unclassified")
+my_colors <- c("#33a02c","#b2df8a","#e31a1c","#fb9a99","#a6cee3","#1f78b4","#fdbf6f","#ff7f00","#cab2d6","#6a3d9a","#ffff99","#b15928","#000000")
+names(my_colors) = my_classes
+
+# Create data frame
 ce <- ddply(total,"SAMPLE",transform, PERCENT_READS=READS/sum(as.numeric(READS))*100)
-ce$READ_CATEGORY <- factor(ce$READ_CATEGORY, levels=c("ds-accepted-intra","ds-accepted-inter","ds-duplicate-intra","ds-duplicate-inter","multihit","single-sided","ds-no-fragment","ds-same-fragment","ds-too-close","ds-too-far","unpaired","unmapped","unclassified"), ordered=TRUE)
-ce <- subset(ce,ce$READS!=0)
-ce = arrange(ce, READ_CATEGORY)
+#ce <- subset(ce,ce$READS!=0)
+ce = mutate(ce, READ_CATEGORY=factor(READ_CATEGORY, levels=rev(my_classes), ordered=TRUE))
 
 # Get the output name
 out <- paste(output,"percent.pdf",sep="/")
 
 pdf(sprintf("%s",out))
 ggplot(ce, aes(x=SAMPLE,y=PERCENT_READS, fill=READ_CATEGORY))+
-	geom_bar(aes(order=ce$READ_CATEGORY), stat="identity") +
+	geom_bar(stat="identity") +
 	theme(legend.background = element_rect(fill="gray90", size=.5, linetype="dotted")) + theme(legend.key.size = unit(0.4,"cm"), plot.margin = unit(c(3.5,0.5,0.5,0.5),"cm")) + theme(legend.position=c(0.5, 1.15)) +
-	guides(fill=guide_legend(reverse=FALSE, title=NULL, ncol=4)) +
-	scale_fill_manual(values=mycolors) +
+	guides(fill=guide_legend(reverse=TRUE, title=NULL, ncol=4)) +
+	scale_fill_manual(values=my_colors) +
 	xlab("Sample") +
-	theme(axis.title.x = element_text(size = rel(1.0), angle = 00)) +
-        ylab("Reads (percentage)") + 
+	theme(axis.title.x = element_text(size = rel(1.0), angle = 00)) + ylab("Reads (percentage)") + 
 	theme(axis.title.y = element_text(size = rel(1.0), angle = 90)) +
 	theme(axis.text.x = element_text(size=9, angle = 60, hjust = 1)) + 
 	scale_y_continuous(breaks=seq(0,100,10), expand=c(0,0)) + coord_flip()
@@ -85,10 +82,10 @@ out <- paste(output,"counts.pdf",sep="/")
 
 pdf(sprintf("%s",out))
 ggplot(ce1, aes(x=SAMPLE,y=READS/1000000, fill=READ_CATEGORY))+
-	geom_bar(aes(order=ce$READ_CATEGORY), stat="identity") +
+	geom_bar(stat="identity") +
 	theme(legend.background = element_rect(fill="gray90", size=.5, linetype="dotted")) + theme(legend.key.size = unit(0.4,"cm"), plot.margin = unit(c(3.5,0.5,0.5,0.5),"cm")) + theme(legend.position=c(0.5, 1.15)) +
-	guides(fill=guide_legend(reverse=FALSE, title=NULL, ncol=4)) +
-	scale_fill_manual(values=mycolors) +
+	guides(fill=guide_legend(reverse=TRUE, title=NULL, ncol=4)) +
+	scale_fill_manual(values=my_colors) +
 	xlab("Sample") +
 	theme(axis.title.x = element_text(size = rel(1.0), angle = 00)) +
         ylab("Reads (million)") + 
