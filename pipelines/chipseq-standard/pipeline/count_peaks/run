@@ -1,0 +1,52 @@
+#!/bin/tcsh
+source ./code/code.main/custom-tcshrc      # customize shell environment
+
+##
+## USAGE: run [--dry-run]
+##
+
+#TITLE: Count Peaks
+#DESCRIPTION: Counts the number of peaks per sample
+#FIGURE: peaks_count_barplots.pdf
+#SHEET: 
+
+# process command-line inputs
+if ($#argv > 1) then
+  grep '^##' $0 | scripts-send2err
+  exit 1
+endif
+
+#~~~~~~~ GET SCRIPT ARGS ~~~~~~~~~~~~#
+set opt = "$1"
+
+
+#~~~~~~~ SET PARAMETERS ~~~~~~~~~~~~#
+# the 'operation' name e.g. pipeline step name ID
+set op = count_peaks 
+
+# the input directories to use
+set inpdirs = "inpdirs/*" 
+
+# filter to use on the branches for inclusion in the step
+set filter = "" 
+
+# the name of the results dir
+set results = results 
+
+# set up the results dir
+scripts-create-path $results/
+scripts-send2err "=== Operation = $op ============="
+
+# threads and memory requirements to pass to qsub
+set resources = 1
+set cmd = "./code/code.main/scripts-qsub-wrapper $resources ./code/chipseq-$op.tcsh"
+
+
+#~~~~~~~ GENERATE RUN SCRIPT ~~~~~~~~~~~~#
+Rscript ./code/code.main/pipeline-master-explorer.r -v -F "$filter" "$cmd" $results/$op "params/params.*.tcsh" "$inpdirs" "" "*" 1
+
+# run and wait until done!
+if ("$opt" != "--dry-run") scripts-submit-jobs ./$results/.db/run
+
+
+

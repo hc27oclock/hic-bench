@@ -1,7 +1,13 @@
 #!/bin/tcsh
 
 ##
-## USAGE: pipeline-new-analysis PIPELINE-NAME NEW-ANALYSIS-DIR [SYMLINK-CODE=false]
+## USAGE: pipeline-new-analysis <pipeline name> /path/to/analysis_dir [SYMLINK-CODE=false]
+## pipeline name should be either:
+## hicseq-standard
+## or:
+## chipseq-standard
+## EXAMPLE: 
+## pipeline-new-analysis hicseq-standard /home/my_new_analysis
 ##
 
 if ($#argv < 2) then
