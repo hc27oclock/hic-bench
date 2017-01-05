@@ -41,9 +41,9 @@ If a new analysis project has not already been created, do so with the following
 
 ## 1. Set input files
 
-There are two methods to set up your sample files. 
+There are two methods to set up your sample files. Pick one of the following:
 
-### Automatic (preferred)
+### Automatic Method (preferred)
 
 From the project directory directory, run:
 ```
@@ -53,7 +53,7 @@ This will scan the given directory and create symlinks to any found FASTQs in `.
 
 NOTE: Certain sample names could cause issues with this, so be sure to check the output. 
 
-### Manual
+### Manual Method 
 
 Within the corresponding `<project_directory>/inputs/fastq` or `<project_directory>/inputs/bam` directory, subdirectories should be created with the name of each sample to be included in the analysis. The following naming scheme is preferable:
 
