@@ -61,8 +61,9 @@ foreach est_mat ($est_matrices)
     set inpmat = $pref.matrix.txt
     ./code/convert_to_crane.tcsh $mat $workdir/$inpmat
     set p = `pwd`
+    set cranepath_abs = `readlink -f $cranepath`
     cd $workdir
-    perl $cranepath/matrix2insulation.pl -i $inpmat -is $inssqr -ids $idspan -im $insmode -nt $noise_thr -bmoe $bmoerr -v
+    perl $cranepath_abs/matrix2insulation.pl -i $inpmat -is $inssqr -ids $idspan -im $insmode -nt $noise_thr -bmoe $bmoerr -v
     rm -f $inpmat
     cd $p
   end

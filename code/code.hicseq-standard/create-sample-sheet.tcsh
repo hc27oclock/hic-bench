@@ -14,6 +14,7 @@ if ($#argv != 1) then
 endif
 
 set genome = $1
+set enzyme_field = 3
 
 # create sample sheet
 set inpdir = fastq
@@ -22,17 +23,9 @@ echo "sample group fastq-r1 fastq-r2 genome enzyme cell-type" | tr ' ' '\t' >! $
 foreach sample (`cd $inpdir; ls -1d *`)
   scripts-send2err "Importing sample $sample..."
   set group = `echo $sample | cut -d'-' -f-2`
-  set fastq1 = `cd $inpdir; ls -1 $sample/*_R1.fastq.gz`
-  set fastq2 = `cd $inpdir; ls -1 $sample/*_R2.fastq.gz`
-  if (`echo $sample | tr '-' '\n' | grep -ic HindIII` == 1) then
-    set enzyme = HindIII
-  else if (`echo $sample | tr '-' '\n' | grep -ic NcoI` == 1) then
-    set enzyme = NcoI
-  else if (`echo $sample | tr '-' '\n' | grep -ic MboI` == 1) then
-    set enzyme = MboI
-  else 
-    set enzyme = NA
-  endif
+  set fastq1 = `cd $inpdir; ls -1 $sample/*_R1.fastq.gz $sample/*_R1_???.fastq.gz`
+  set fastq2 = `cd $inpdir; ls -1 $sample/*_R2.fastq.gz $sample/*_R2_???.fastq.gz`
+  set enzyme = `echo $sample | cut -d'-' -f$enzyme_field`
   set cell_type = `echo $sample | cut -d'-' -f1`
   echo "$sample\t$group\t`echo $fastq1 | tr ' ' ','`\t`echo $fastq2 | tr ' ' ','`\t$genome\t$enzyme\t$cell_type" >> $sheet
 end
