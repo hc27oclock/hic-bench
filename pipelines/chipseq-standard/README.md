@@ -78,7 +78,7 @@ Where `<genome>` is `hg19`, `hg38`, etc.. The `<fragment-size>` entry is optiona
 Run the pipeline with:
 
 ```
-<project_directory>$ ./code.main/pipeline-execute PROJECT-NAME E-MAIL
+<project_directory>$ ./code.main/pipeline-execute <project_ID> <your_email@address.edu>
 ```
 
 ## Notes
