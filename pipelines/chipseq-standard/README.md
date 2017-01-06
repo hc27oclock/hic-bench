@@ -116,7 +116,7 @@ REPORT-AUTHOR: Stephen M. Kelly
 
 REPORT-AUTHOR-EMAIL: stephen.kelly@nyumc.org
 
-PI-NAME: Dr. Smith
+PI-NAME: Dr. Tsirigos
 ```
 
 ```bash
