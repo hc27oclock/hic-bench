@@ -35,7 +35,7 @@ cd /path/to/<project_directory>
 
 If a new analysis project has not already been created, do so with the following command:
 
-```
+```bash
 ~/hic-bench/code/code.main/pipeline-new-analysis chipseq-standard /path/to/<project_directory>
 ```
 
@@ -46,7 +46,7 @@ There are two methods to set up your sample files. Pick one of the following:
 ### Automatic Method (preferred)
 
 From the project directory directory, run:
-```
+```bash
 ./code/setup-sample-files.sh <fastq_source_dir>
 ```
 This will scan the given directory and create symlinks to any found FASTQs in `./inputs/fastq`. It will also clean up file names if they are in the standard Illumina bcl2fastq structure so they can be recognized by `create-sample-sheet.tcsh` (next step). It can be run multiple times to scan multiple directories, but outputs may get overwritten if the sample names are the same. Found FASTQs are printed to keep track of what is happening.
@@ -67,7 +67,7 @@ Each subdirectory should contain all fastq or bam files to be used for that samp
 
 A sample sheet must be created for the analysis project. Run the follow command to do so:
 
-```
+```bash
 <project_directory>/inputs$ ./code/create-sample-sheet.tcsh <genome> <fragment-size>
 ```
 
@@ -77,21 +77,63 @@ Where `<genome>` is `hg19`, `hg38`, etc.. The `<fragment-size>` entry is optiona
 
 Run the pipeline with:
 
-```
+```bash
 <project_directory>$ ./code.main/pipeline-execute <project_ID> <your_email@address.edu>
+```
+
+## 4. Compile Report
+
+A report template has been supplied in the `report` directory. It will automatically scan the pipeline output, and generate a PDF which includes sample sheets and figures found in the report. 
+
+First, the project info text file needs to be updated with the correct parameters for the project. 
+
+
+```bash
+$ cat project_info.txt
+PROJECT-DIR: /project/dir
+
+PROJECT-ID: Project_ID_ChIP-Seq
+
+PROJECT-ID-SHORT: ChIP-Seq_ID
+
+REPORT-AUTHOR: Stephen M. Kelly
+
+REPORT-AUTHOR-EMAIL: stephen.kelly@nyumc.org
+
+PI-NAME: Dr. X
+
+$ nano project_info.txt
+# edit the file
+
+$ cat project_info.txt
+PROJECT-DIR: /ifs/home/kellys04/projects/SmitLab_Mike_ChIPSeq_2017-01-05
+
+PROJECT-ID: SmitLab_Mike_ChIPSeq_2017-01-05
+
+PROJECT-ID-SHORT: Mike_ChIPSeq
+
+REPORT-AUTHOR: Stephen M. Kelly
+
+REPORT-AUTHOR-EMAIL: stephen.kelly@nyumc.org
+
+PI-NAME: Dr. Smith
+```
+
+```bash
+<project_directory>/report$ ./compile_report_wrapper.sh chipseq_report.Rnw
 ```
 
 ## Notes
 
 Errors encountered during pipeline execution can be viewed with:
 
-```
+```bash
 <project_directory>$ code.main/pipeline-errors
 ```
 
 Analysis results can be removed with:
 
-```
+```bash
 <project_directory>$ code/clean-all
 ```
 
