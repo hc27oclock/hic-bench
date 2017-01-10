@@ -92,7 +92,7 @@ A report template has been supplied in the `report` directory. It will automatic
 
 First, the project info text file needs to be updated with the correct parameters for the project. 
 
-
+Default entries:
 ```bash
 $ cat project_info.txt
 PROJECT-DIR: /project/dir
@@ -106,7 +106,10 @@ REPORT-AUTHOR: Stephen M. Kelly
 REPORT-AUTHOR-EMAIL: stephen.kelly@nyumc.org
 
 PI-NAME: Dr. X
+```
 
+Edit the file:
+```bash
 $ nano project_info.txt
 # edit the file
 
