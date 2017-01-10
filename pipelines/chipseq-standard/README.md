@@ -126,8 +126,9 @@ REPORT-AUTHOR-EMAIL: stephen.kelly@nyumc.org
 
 PI-NAME: Dr. Tsirigos
 ```
-
+Compile the report:
 ```bash
+cd report
 report$ ./compile_report_wrapper.sh chipseq_report.Rnw
 ```
 
