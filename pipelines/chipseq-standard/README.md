@@ -162,7 +162,7 @@ If the script does not properly copy all files, you can sync them manually with 
 $ mkdir -p /path/to/lab_dir/2016-06-08/ChIP-Seq/peaks
 
 # copy only 'peaks.bed', ignore all other files
-$ rsync --dry-run -vhrc ../pipeline/peaks/results/ results_dir/peaks/ --include="*/" --include="peaks.bed" --exclude="*"
+$ rsync --dry-run -vhrc pipeline/peaks/results/ /path/to/lab_dir/2016-06-08/ChIP-Seq/peaks/ --include="*/" --include="peaks.bed" --exclude="*"
 ```
 
 ## Notes
