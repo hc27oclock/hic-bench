@@ -40,7 +40,9 @@ If a new analysis project has not already been created, do so with the following
 ~/hic-bench/code/code.main/pipeline-new-analysis chipseq-standard /path/to/<project_directory>
 ```
 
-Unless otherwise stated, all following steps should be excuted from within the `<project_directory>` you have just created. It is recommended to follow a standard naming pattern for `<project_directory>` names, such as `SmithLab_Mike_ChIPSeq_2017-01-05`, where `Smith` is the name of the PI or lab head, `Mike` is the name of the researcher or student requesting analysis, `ChIPSeq` is the analysis type, and `2017-01-05` is the date that the analysis was started.
+It is recommended to follow a standard naming pattern for `<project_directory>` names, such as `SmithLab_Mike_ChIPSeq_2017-01-05`, where `Smith` is the name of the PI or lab head, `Mike` is the name of the researcher or student requesting analysis, `ChIPSeq` is the analysis type, and `2017-01-05` is the date that the analysis was started.
+
+Unless otherwise stated, all following steps should be excuted from within the `<project_directory>` you have just created. 
 
 ## 1. Set input files
 
