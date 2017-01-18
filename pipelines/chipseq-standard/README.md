@@ -11,6 +11,10 @@ This guide assumes that you have cloned this repository to the location `~/hic-b
 ## Overview
 
 ```bash
+# update hic-bench
+cd ~/hic-bench
+git pull
+
 # create project directory
 ~/hic-bench/code/code.main/pipeline-new-analysis chipseq-standard /path/to/<project_directory>
 
@@ -26,7 +30,8 @@ cd inputs
 
 # run the pipeline
 cd /path/to/<project_directory>
-./code.main/pipeline-execute <project_ID|project_directory_name> <your.email.goes.here@address.edu>
+./run.dry
+./code.main/pipeline-execute <project_name> <name@domain.edu>
 
 ```
 
@@ -85,10 +90,16 @@ If editing in Excel, run `mac2unix` or `dos2unix` on the sample sheet.
 
 ## 3. Pipeline execution
 
+Test the pipeline with:
+
+```bash
+./run.dry
+```
+
 Run the pipeline with:
 
 ```bash
-./code.main/pipeline-execute <project_ID> <your_email@address.edu>
+./code.main/pipeline-execute <project_ID> <name@domain.edu>
 ```
 
 ## 4. Compile Report
