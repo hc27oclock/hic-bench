@@ -18,7 +18,7 @@ output_table="${outdir}/peaks_stats.tsv"
 echo -e 'Peaks\tSample' > "$output_table"
 
 #~~~~~~ FIND PEAKS ~~~~~~~~~~~~#
-peaks_files="$(find "$peaks_dir" -type f -name "peaks.bed")"
+peaks_files=$(find $peaks_dir -type f -name peaks.bed | LC_ALL=C sort)
 
 #~~~~~~ COUNT PEAKS ~~~~~~~~~~~~#
 
