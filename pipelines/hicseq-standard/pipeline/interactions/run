@@ -18,7 +18,7 @@ endif
 set opt = "$1"
 
 # setup
-set op = interactions-grouped
+set op = interactions
 set inpdirs = "inpdirs/*"
 set results = results
 scripts-create-path $results/

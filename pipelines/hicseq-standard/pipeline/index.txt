@@ -7,15 +7,15 @@ tracks
 
 matrix-filtered
 
-matrix-prep
-
 matrix-ic
 
-matrix-hicnorm
+matrix-diff 
 
 #matrix-estimated
 #
 matrix-stats
+
+matrix-tracks
 
 compare-matrices
 compare-matrices-stats
@@ -29,8 +29,8 @@ domains-stats
 compare-boundaries
 compare-boundaries-stats
 
-#boundary-diff
-#
+boundary-diff
+
 hicplotter
 
 interactions
