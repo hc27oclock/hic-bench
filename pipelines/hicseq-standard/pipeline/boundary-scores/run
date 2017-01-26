@@ -20,7 +20,7 @@ set opt = "$1"
 # setup
 set op = boundary-scores
 set inpdirs = "inpdirs/*"
-set filter = "*.res_40kb"                  # work only with 40kb resolution
+set filter = "matrix-filtered.by_sample.res_40kb"                  # work only with 40kb resolution
 set results = results
 scripts-create-path $results/
 scripts-send2err "=== Operation = $op ============="

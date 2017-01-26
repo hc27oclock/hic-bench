@@ -233,8 +233,8 @@ if ((out_obj_vars=="*")&&(split_var=="")) {
   
 # check if out-object-variable is "." (i.e. output objects are the same as input objects)
 } else if (out_obj_vars==".") {
-  if (split_var!="") write("Warning: split-var is ignored!",stderr())                           # TODO: create separate case for split-var!=""
-  obj_db = cbind(obj_db,"out-obj-var"=obj_db[,"inp-obj-var"],"split-var"="","split-value"="","out-object"=obj_db[,"inp-object"])
+  obj_db = split(obj_db,obj_db$"inp-obj-var",drop=TRUE)                   # first, split objects by input variable
+  obj_db = do.call(rbind, lapply(names(obj_db), function(inp_obj_var) create_output_objects(inp_db=obj_db[[inp_obj_var]],sample_sheet=sample_sheet,out_obj_var=inp_obj_var,split_var=split_var)))
 
 } else {
   L = unlist(strsplit(out_obj_vars,split=' '))

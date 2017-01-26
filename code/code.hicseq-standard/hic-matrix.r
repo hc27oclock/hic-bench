@@ -856,6 +856,55 @@ op_preprocess <- function(cmdline_args)
 
 
 
+
+# ########################
+#  OPERATION = ROTATE
+# ########################
+
+op_rotate <- function(cmdline_args) 
+{
+  # process command-line arguments
+  option_list <- list(
+    make_option(c("-v","--verbose"), action="store_true",default=FALSE, help="Print more messages."),
+    make_option(c("-o","--output-file"), default="", help="Output matrix tsv file [default \"%default\"]."),
+    make_option(c("--row-labels"), action="store_true",default=FALSE, help="Input matrix has row labels")
+  )
+  usage = 'hic-matrix.r rotate [OPTIONS] TSV-MATRIX';
+  
+  arguments <- parse_args(args=cmdline_args,OptionParser(usage=usage,option_list=option_list),positional_arguments=c(0,Inf));
+  opt <- arguments$options
+  if (opt$verbose) print_options(opt) 
+  files <- arguments$args;
+  if (length(files)!=1) { write(paste('Usage:',usage),stderr()); quit(save='no'); }
+  
+  # input arguments
+  fmatrix = files[1]
+  
+  # read files
+  if (opt$verbose) { write('Loading matrix...',stderr()); }
+  if (opt$"row-labels"==FALSE) { x = as.matrix(read.table(fmatrix,check.names=F)) } else { x = as.matrix(read.table(fmatrix,row.names=1,check.names=F)) }
+
+  # preprocess input matrix
+  if (is_full_matrix(x)==FALSE) {
+    if (opt$verbose) write('Inverse-rotating distance-restricted matrix...',stderr())
+    x = MatrixInverseRotate45(x)
+  }
+
+  # print new matrix
+  if (opt$verbose) { write("Printing new matrix...",stderr()); }
+#  write.table(format(x,scientific=TRUE,digits=4),quote=F,sep='\t',file=opt$"output-file")
+  write.table(x,quote=F,sep='\t',file=opt$"output-file")
+
+  # done
+  if (opt$verbose) { write("Done.",stderr()); }
+  quit(save='no')
+}
+
+
+  
+
+
+
 # ##########################
 #  OPERATION = NORMALIZE
 # ##########################
@@ -2955,6 +3004,7 @@ if (length(args)<1) {
   cat('\n');
   cat('OPERATIONS:\n');
   cat('  preprocess   Preprocess an input matrix.\n');
+  cat('  rotate       Inverse-rotate distance-restricted matrix.\n');
   cat('  normalize    Normalize matrix by fragment effective length.\n');
   cat('  standardize  Standardize input matrix given average count statistics as a function of distance.\n');
   cat('  submatrix    Extracts submatrix from an input matrix.\n');
@@ -2997,6 +3047,8 @@ dyn.load(paste(scriptPath,"/hic-matrix.so",sep=''));
 
 if (op=="preprocess") {
   op_preprocess(args);
+} else if (op=="rotate") {
+  op_rotate(args)
 } else if (op=="normalize") {
   op_normalize(args);
 } else if (op=="standardize") {
@@ -3012,27 +3064,27 @@ if (op=="preprocess") {
 } else if (op=="extract") { 
   op_extract(args)
 } else if (op=="matrices") {
-  op_matrices(args);
+  op_matrices(args)
 } else if (op=="heatmaps") {
-  op_heatmaps(args);
+  op_heatmaps(args)
 } else if (op=="snapshots") {
-  op_snapshots(args);
+  op_snapshots(args)
 } else if (op=="corr") {
-  op_corr(args);
+  op_corr(args)
 } else if (op=="compare") {
-  op_compare(args);
+  op_compare(args)
 } else if (op=="bscores") {
-  op_bscores(args);
+  op_bscores(args)
 } else if (op=="bdiff") {
-  op_bdiff(args);
+  op_bdiff(args)
 } else if (op=="domains") {
-  op_domains(args);
+  op_domains(args)
 } else if (op=="domain-cmp") {
-  op_domain_cmp(args);
+  op_domain_cmp(args)
 } else if (op=="loops") {
-  op_loops(args);
+  op_loops(args)
 } else if (op=="diff") {
-  op_diff(args);
+  op_diff(args)
 } else {
   write(paste('Error: unknown operation "',op,'"!',sep=''),stderr());
 }
