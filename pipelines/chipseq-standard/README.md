@@ -85,7 +85,10 @@ The `fragment-size` should be a numeric argument such as `300`, representing the
 After creation of the sample sheet, output in `inputs/sample-sheet.tsv`, a manual review process is required to match the correct control or input samples with experimental samples, verify proper grouping names, files, and other entries. 
 If not entered prior, `fragment-size` and `chip` columns should be filled in for each sample. 
 This process can be completed within Microsoft Excel, but saving the file in Excel should be avoided due to the introduction of formatting errors by Excel. 
-If editing in Excel, run `mac2unix` or `dos2unix` on the sample sheet.
+
+Typical fragmentation sizes are 150 for histone marks, and 400 for transcription factors.
+
+If editing in Excel or in Windows, run `mac2unix` or `dos2unix` on the sample sheet.
 
 
 ## 3. Pipeline execution
