@@ -27,6 +27,7 @@ echo -e "Input directory is:\n${peaks_dir}\n"
 echo -e "Output Directory is:\n${outdir}\n"
 echo -e "Output table is:\n${output_table}\n"
 
+tmp=`mktemp`
 
 for i in $peaks_files; do
 echo -e "Found peak file:\n${i}\n"
@@ -40,10 +41,12 @@ num_peaks=$(cat $i | wc -l)
 echo "num_peaks is $num_peaks"
 
 # print it to the table
-echo -e "${num_peaks}\t${tmp_sampleID}" >> "$output_table"
+echo -e "${num_peaks}\t${tmp_sampleID}" >> "$tmp"
 
 done
 
+sort -k2,2 $tmp >> "$output_table"
+rm -rf $tmp
 
 
 #~~~~~~ PLOT PEAKS ~~~~~~~~~~~~#
