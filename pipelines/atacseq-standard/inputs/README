@@ -1,0 +1,18 @@
+#####################################
+## REQUIRED INPUT FILES/DIRECTORIES
+#####################################
+
+* params/params.tcsh: script used to load all tools and dependencies using "module load"
+
+* fastq/: put all fastq.gz or bam files here (symbolic links are accepted as well)
+
+* sample-sheet.tsv: 
+This file can be created automatically by ./code/create-sample-sheet.tcsh script and then edited manually if necessary. Has the following required fields:
+- sample (e.g. CUTLL1-DMSO-CTCF-rep1)
+- control (e.g. CUTLL1-DMSO-Input-rep1)
+- group (e.g. CUTLL1-DMSO-CTCF)
+- fastq-r1
+- fastq-r2
+- genome (e.g. hg19, mm10)
+- fragmentation-size
+

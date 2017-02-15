@@ -160,7 +160,7 @@ for (i in 1:length(row.names(contrasts))) {
 }
 
 # repeat with blocking factor if blocking factor parameter was passed
-if (!is.na(args[4])) {
+if (!is.na(blockFactor)) {
   message(" ========== re-analyze with blocking factor ========== ")
 
   # automatic contrasts with blocking factor

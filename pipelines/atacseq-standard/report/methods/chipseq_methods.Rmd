@@ -1,0 +1,18 @@
+---
+title: "ChIP-Seq Pipeline Methods"
+author: "Stephen Kelly, Alireza Khodadadi-Jamayran, Aristotelis Tsirigos"
+date: "8/17/2016"
+output: html_document
+citation_package: natbib
+bibliography: chipseq_references.bib
+biblio-style: apsr
+---
+
+ChIP-Seq analysis was performed using the HiC-Bench [@HiCBench] pipeline software package developed by the Applied Bioinformatics Center.  Raw reads were aligned to the hg19 reference genome using bowtie2 [@Bowtie2]. Sequencing read and alignment quality metrics were determined using R [@R_core], DeepTools [@deepTools], SAMtools [@samtools], BEDtools [@bedtools], Picard Tools [@picardtools], BigWig and BigBed tools [@UCSCbigWigbigBedTools], and GenomicTools [@GenomicTools]. Peaks were called with MACS2 [@MACS], and examined with the UCSC Genome Browser [@UCSCGenomeBrowser]. Differential binding patterns were analyzed with DiffBind [@DiffBind] and R [@R_core]. Gene ontology profiles and KEGG pathways were determined with the clusterProfiler [@clusterProfiler] software package. 
+
+This work used computing resources at the Laura and Isaac Perlmutter Cancer Center, which is supported by Cancer Center Support Grant P30CA016087. A. Tsirigos was supported by a Research Scholar Grant, RSG-15-189-01-RMC from the American Cancer Society. 
+This work also used computing resources at the High Performance Computing Facility of the Center for Health Informatics and Bioinformatics at the NYU Langone Medical Center.
+
+
+
+# References

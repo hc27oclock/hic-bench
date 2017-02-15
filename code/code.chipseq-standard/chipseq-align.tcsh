@@ -67,7 +67,7 @@ else
 endif
 
 # align
-if ("$R1" != '') then
+if ("$ext" == "fastq") then
   # run aligner
   scripts-send2err "Aligning reads..."
   if ("$R2" == "") then
@@ -75,10 +75,22 @@ if ("$R1" != '') then
   else
     set input = "-1 $R1 -2 $R2"
   endif
-  $aligner --threads $threads $align_params $input | samtools view -q $mapq -@ $threads -Sb1 - | samtools sort -m 10G -@ $threads - $outdir/alignments_sorted
+  $aligner --threads $threads $align_params $input >! $outdir/alignments_all.sam
+  set BAM = "$outdir/alignments_all.sam"
+  scripts-send2err "Sorting alignments..."
+  samtools view -q $mapq -@ $threads -Sb1 $BAM | samtools sort -m 10G -@ $threads - $outdir/alignments_sorted
 else
   scripts-send2err "Sorting alignments..."
   samtools sort -m 10G -@ $threads $BAM $outdir/alignments_sorted
+endif
+
+# filter blacklist and chrM
+# https://sites.google.com/site/anshulkundaje/projects/blacklists
+if ("$excluding_regions" != '') then
+  scripts-send2err "Filtering alignments..."
+  bedtools intersect -abam $outdir/alignments_sorted.bam -b $excluding_regions -v > $outdir/alignments_filtered.bam
+else
+  ln -s alignments_sorted.bed $outdir/alignments_filtered.bam
 endif
 
 # remove duplicate alignments
@@ -93,7 +105,7 @@ java -Xms8G -Xmx16G -jar $picard_root/MarkDuplicates.jar \
  ASSUME_SORTED=false \
  CREATE_INDEX=false \
  METRICS_FILE=$outdir/picard_metrics.txt \
- INPUT=$outdir/alignments_sorted.bam \
+ INPUT=$outdir/alignments_filtered.bam \
  OUTPUT=$outdir/alignments.bam
 
 # index
@@ -101,18 +113,13 @@ samtools index $outdir/alignments.bam
 
 # stats
 scripts-send2err "Computing statistics..."
-if ("$R1" != '') then
-  set R1_files = `echo $R1 | tr ',' ' '`
-  set n_fastq_lines = `cat $R1_files | gunzip | wc -l`
-  set n_reads = `echo "$n_fastq_lines / 4" | bc`
-else
-  set n_reads = `samtools view $BAM | wc -l`
-endif
-set n_aligned = `samtools view $outdir/alignments_sorted.bam | wc -l`
-set n_unique = `samtools view $outdir/alignments.bam | wc -l`
+set n_reads = `samtools view -c $BAM`
+set n_aligned = `samtools view -c $outdir/alignments_sorted.bam`
+set n_filtered = `samtools view -c $outdir/alignments_filtered.bam`
+set n_ddup = `samtools view -c $outdir/alignments.bam`
 echo "Total reads\t$n_reads" >! $outdir/stats.tsv
 echo "Aligned reads\t$n_aligned" >> $outdir/stats.tsv
-echo "De-duplicated alignments\t$n_unique" >> $outdir/stats.tsv
+echo "De-duplicated alignments\t$n_ddup" >> $outdir/stats.tsv
 
 # create bigwig
 scripts-send2err "Creating bigwig file..."
@@ -122,7 +129,7 @@ set bedgraph = `scripts-create-temp`
 scripts-send2err "temp bedgraph: $bedgraph"
 # cat $genome_dir/genome.bed | awk '{print $1,$2,$3,$1}' | gtools-regions n >! $chr_sizes
 cat $genome_dir/bowtie2.index/genome.fa.fai | cut -f 1,2 | sort -k1,1 -k2,2n >! $chr_sizes
-set scale = `echo 1000000/$n_unique | bc -l`
+set scale = `echo 1000000/$n_ddup | bc -l`
 bedtools genomecov -ibam $outdir/alignments.bam -scale $scale -bg -g $chr_sizes | sort -k1,1 -k2,2n >! $bedgraph
 bedGraphToBigWig $bedgraph $chr_sizes $outdir/track.bw
 rm -f $chr_sizes $bedgraph
@@ -130,6 +137,8 @@ rm -f $chr_sizes $bedgraph
 
 # cleanup
 rm -f $outdir/alignments_sorted.bam
+rm -f $outdir/alignments_filtered.bam
+rm -f $outdir/alignments_all.sam
 
 # -------------------------------------
 # -----  MAIN CODE ABOVE --------------

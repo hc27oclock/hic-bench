@@ -45,7 +45,9 @@ foreach sample ($samples)
   if (($fraglen != "") && ($fraglen != "auto")) then
     set frag = $fraglen
   else
-    if (`echo $sample | tr '-' '\n' | grep -iEc '^H2AZ|^H[234]K[0-9]'` == 1) then
+    if (`ls -l ../code | rev | cut -d ' ' -f1 | rev | xargs basename` == "code.atacseq-standard") then
+      set frag = 200   # atac-seq
+    else if (`echo $sample | tr '-' '\n' | grep -iEc '^H2AZ|^H[234]K[0-9]'` == 1) then
       set frag = 150   # histone
     else 
       set frag = 400   # TF
