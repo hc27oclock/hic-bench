@@ -9,6 +9,7 @@ peaktable
 count_peaks
 
 matrices
+heatmaps
 
 pca
 
