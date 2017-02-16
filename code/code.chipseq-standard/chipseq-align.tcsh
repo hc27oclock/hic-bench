@@ -88,7 +88,13 @@ endif
 # https://sites.google.com/site/anshulkundaje/projects/blacklists
 if ("$excluding_regions" != '') then
   scripts-send2err "Filtering alignments..."
-  bedtools intersect -abam $outdir/alignments_sorted.bam -b $excluding_regions -v > $outdir/alignments_filtered.bam
+  set t = `mktemp`
+  cat $excluding_regions >! $t
+  if ($excluding_chrom != "") then
+    grep -i $excluding_chrom inputs/genomes/$genome/genome.bed | cut -f1-3 >> $t
+  endif
+  bedtools intersect -abam $outdir/alignments_sorted.bam -b $t -v > $outdir/alignments_filtered.bam
+  rm -rf $t
 else
   ln -s alignments_sorted.bed $outdir/alignments_filtered.bam
 endif

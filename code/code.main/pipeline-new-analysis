@@ -59,6 +59,10 @@ set author_email = `echo $author"@nyumc.org" | sed 's/ /./g'`
 set abs_analysis_dir = `readlink -f $analysis_dir | xargs dirname`
 set PI = `echo $abs_analysis_dir | tr '\/' '\n' | grep -E 'Lab$' | sed -E 's/Lab$//'`
 set person = `echo $abs_analysis_dir | sed -E 's/Lab\//\n/g' | tail -1 | rev | xargs basename | rev`
+set code_version = `cat $repo_code_dir/../.git/logs/HEAD | tail -1 | cut -d' ' -f2 | head -c 7`
+if ($code_version == "") then
+  set code_version = `cat $repo_code_dir/../../project_info.txt | tail -1 | cut -d' ' -f2`":"`dirname $0`
+endif
 
 cat << EOF >! project_info.txt
 PROJECT-DIR: $abs_analysis_dir
@@ -72,4 +76,6 @@ REPORT-AUTHOR: $author
 REPORT-AUTHOR-EMAIL: $author_email
 
 PI-NAME: Dr. $PI
+
+CODE-VERSION: $code_version
 EOF

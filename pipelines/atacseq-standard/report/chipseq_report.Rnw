@@ -64,6 +64,11 @@ PI_name<-gsub(pattern = "PI-NAME: ",
                             x = grep(pattern = "PI-NAME: ",x = ProjInfo,fixed = TRUE,value = TRUE),fixed = TRUE)
 PI_name<-latexTranslate(PI_name)
 
+# code version
+code_version<-gsub(pattern = "CODE-VERSION: ",
+                            replacement = "",
+                            x = grep(pattern = "CODE-VERSION: ",x = ProjInfo,fixed = TRUE,value = TRUE),fixed = TRUE)
+code_version<-latexTranslate(code_version)
 
 # path to the project's 'pipeline' dir
 Pipeline_dir<-paste0(Project_dir,"/pipeline") 
@@ -132,7 +137,7 @@ Pipeline_Index<-scan(file=paste0(Pipeline_dir,"/index.txt"),what="", sep="\n",qu
 \title[\Sexpr{Project_ID_short}]{\Sexpr{Project_ID} \\ Quality Metrics}
 \author{Author: \Sexpr{Report_author} \\ \Sexpr{Report_author_email}}
 \institute{\normalsize PI: \Sexpr{PI_name} \\ NYU Langone Medical Center, New York, NY 10016}
-\date{\today}
+\date{CODE-VERSION: \Sexpr{code_version} \\ \today}
 \titlegraphic{\includegraphics[width=0.25\textwidth]{figure/NYU_white}} % image to show on the title slide
 \maketitle
 <<beamer-function,engine='R',include=FALSE,echo=FALSE>>=
