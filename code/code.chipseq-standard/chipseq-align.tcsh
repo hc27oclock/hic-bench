@@ -96,7 +96,7 @@ if ("$excluding_regions" != '') then
   bedtools intersect -abam $outdir/alignments_sorted.bam -b $t -v > $outdir/alignments_filtered.bam
   rm -rf $t
 else
-  ln -s alignments_sorted.bed $outdir/alignments_filtered.bam
+  ln -s alignments_sorted.bam $outdir/alignments_filtered.bam
 endif
 
 # remove duplicate alignments

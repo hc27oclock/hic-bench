@@ -5,7 +5,8 @@ write("Checking installation of R packages", stderr())
 # Bioconductor packages
 bioc_package_list = c("ChIPseeker", "TxDb.Hsapiens.UCSC.hg19.knownGene", "clusterProfiler",
                       "org.Hs.eg.db", "wavClusteR", "DiffBind", "biomaRt", "ChIPpeakAnno",
-                      "preprocessCore")
+                      "preprocessCore","tools","ReactomePA","TxDb.Mmusculus.UCSC.mm9.knownGene",
+		      "TxDb.Mmusculus.UCSC.mm10.knownGene","org.mm.eg.db")
 
 for (package in bioc_package_list) {
   # if(package %in% rownames(installed.packages()) == FALSE){

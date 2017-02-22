@@ -12,6 +12,8 @@ matrices
 
 pca
 heatmaps
+peakanno
+summ-peakanno
 
 diffbind
 
