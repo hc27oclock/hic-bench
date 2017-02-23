@@ -19,7 +19,7 @@ if(grepl("hg19|hg38",opt$genome)){
   TXDB_NAME = paste0("TxDb.Hsapiens.UCSC.",opt$genome,".knownGene");
   annoDb_name = paste0("org.Hs.eg.db");
 }else if(grepl("mm9|mm10",opt$genome)){
-  TXDB_NAME = paste0("TxDb.Hsapiens.UCSC.",opt$genome,".knownGene");
+  TXDB_NAME = paste0("TxDb.Mmusculus.UCSC.",opt$genome,".knownGene");
   annoDb_name = paste0("org.Mm.eg.db");
 }else {
   cat("ERROR: Unsupported Genome\n");
