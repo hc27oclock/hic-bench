@@ -3,5 +3,5 @@
 source ./inputs/params/params.tcsh
 
 set chrom_excluded = 'chr[MY]'       # excluded chromosomes
-set prep_params = "--scale3"
+set prep_params = "--scale3 --replace-na"
 

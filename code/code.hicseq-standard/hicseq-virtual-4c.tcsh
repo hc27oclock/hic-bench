@@ -43,11 +43,21 @@ endif
 set workdir = $tempdir/work
 mkdir -p $workdir
 
-# create input matrices for HiCplotter
+# create input matrices
 set object1 = $objects[1]
 set chrom_included = `cat $loci | cut -f1 | sort -u`
 foreach chr ($chrom_included)
   scripts-send2err "Processing chromosome $chr..."
+  
+  # number of reads
+  set scaling = 1.0     # default
+  if ($scale == yes) then
+    if (-e $branch/$object1/stats.tsv) then
+      set n_reads = `cat $branch/$object1/stats.tsv | grep '^ds-accepted-intra	' | cut -f2`
+      set scaling = `echo $n_reads/1000000000 | bc -l`
+    endif
+  endif
+  scripts-send2err "- scaling factor = $scaling"
   
   # extract matrices
   if (-e $branch/$object1/matrix.$chr.RData) then
@@ -71,7 +81,7 @@ foreach chr ($chrom_included)
       set blocus = `echo $b | cut -d'|' -f1`
       set bname = `echo $b | cut -d'|' -f2 | tr ':' '_'`
       set col = `cat $fnew | grep -n "^$blocus	" | cut -d':' -f1`
-      cat $fnew | cut -f1,$col | scripts-skipn 1 | awk '$2>0' | sed 's/:/\t/' | sed 's/-/\t/' >! $outdir/$bname.bedgraph
+      cat $fnew | cut -f1,$col | scripts-skipn 1 | awk '$2>0' | sed 's/$/	'$scaling'/' | awk '{print $1"\t"$2/$3}' | sed 's/:/\t/' | sed 's/-/\t/' >! $outdir/$bname.bedgraph
     end
   end
   

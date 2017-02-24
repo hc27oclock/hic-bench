@@ -44,7 +44,7 @@ end
 
 # regions to plot
 set regions = `cat $genome_dir/gene-name.bed | grep -wiE 'MYC|NANOG' | gtools-regions center | gtools-regions shiftp -5p -4000000 -3p +4000000 | cut -f-3 | sed 's/\t/:/' | sed 's/\t/-/'`
-set tiles = "params/regions.bed"
+set tiles = "$outdir/regions.bed"
 cat $genome_dir/gene-name.bed | grep -wiE 'MYC|NANOG' | sed 's/^/0.7\t66,80,209\t/' | tools-cols -t 2 3 4 0 1 5 >! $tiles
 set tiles_labels = "regions"
 set highlight = 0
