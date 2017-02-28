@@ -20,7 +20,7 @@ set object2 = $5
 source ./code/code.main/scripts-read-job-vars $branch "$object1 $object2" "genome genome_dir bin_size"
 
 # run parameter script
-# source $params
+#source $params
 
 # create path
 scripts-create-path $outdir/
@@ -28,6 +28,8 @@ scripts-create-path $outdir/
 # -------------------------------------
 # -----  MAIN CODE BELOW --------------
 # -------------------------------------
+
+if ($object1 == $object2) goto goto_done
 
 # Create the working directory
 if ($?TMP) then
@@ -108,7 +110,6 @@ foreach region ($regions)
     #set region_labels = ( $region_labels $region )
     #set loop_beds = ( $loop_beds $loop_bed )
     set bedgraph_files = ( $bedgraph_files $bedgraphs )
-    #set domain_files = ( $domain_files $beds )
     set bedgraph_files_labels = ($bedgraph_files_labels $bedgraph_labels)
   end
 
@@ -122,6 +123,7 @@ foreach region ($regions)
   set hicplotter_abs_path = `readlink -f $hicplotter_path`
   cd $workdir
   foreach filetype (pdf png)
+    echo python $hicplotter_abs_path -v -f $hic_matrices -n $sample_labels -chr $chrom -s $start_bin -e $stop_bin -r $bin_size -o $region -hist $bedgraph_files -hl $bedgraph_files_labels -hc FF0000,0000FF FF0000,0000FF -fh $fileheader -ext $filetype -high $highlight_opt -c $compare -p $pair -ptr 1 -trh 25 -spi 1 -si 1 -pdb $domainbars -pcd 1 -pcdf $domain_files #-g $gene_path
     python $hicplotter_abs_path -v -f $hic_matrices -n $sample_labels -chr $chrom -s $start_bin -e $stop_bin -r $bin_size -o $region -hist $bedgraph_files -hl $bedgraph_files_labels -hc FF0000,0000FF FF0000,0000FF -fh $fileheader -ext $filetype -high $highlight_opt -c $compare -p $pair -ptr 1 -trh 25 -spi 1 -si 1 -pdb $domainbars -pcd 1 -pcdf $domain_files #-g $gene_path
     foreach fout (chr*.$filetype)
       mv -f $fout $p/$outdir/`echo $fout | tr ':' ' ' | tr '-' ' ' | awk -F" " '{print $1":"$2"-"$3}'`.$filetype
@@ -131,8 +133,10 @@ foreach region ($regions)
 end
 
 # Cleanup
-#rm -rf $workdir
-	
+rm -rf $workdir
+
+goto_done:
+
 # -------------------------------------
 # -----  MAIN CODE ABOVE --------------
 # -------------------------------------

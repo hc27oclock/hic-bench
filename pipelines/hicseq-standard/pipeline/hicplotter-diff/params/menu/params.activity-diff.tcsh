@@ -78,7 +78,7 @@ end
 
 # regions to plot [TODO: take only $object1.$object2 bdiff?]
 set bdiff_files = `find $bdiff_branch/ -name bdiff.k=001.tsv | grep 'T_cell-no_treat' | grep -vE 'GSI'`
-set regions = `cat $bdiff_files | grep -v ^locus | awk '$18>+0.5 || $18<-0.5' | cut -f1 | sort -u | sed 's/:/\t/' | sed 's/-/\t/' | gtools-regions -center | gtools-regions -shiftp -5p -2000000 -3p +2000000 | gtools-regions -bounds -g $genome_dir/genome.bed | sed 's/\t/:/' | sed 's/\t/-/'`
+set regions = `cat params/diff-activity.bed | cut -f-3 | gtools-regions -center | gtools-regions -shiftp -5p -2000000 -3p +2000000 | gtools-regions -bounds -g $genome_dir/genome.bed | sed 's/\t/:/' | sed 's/\t/-/'`
 
 set tiles = "params/regions.bed"
 set tiles_labels = "regions"

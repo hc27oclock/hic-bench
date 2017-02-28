@@ -12,7 +12,7 @@ set hicplotter_path = ./code/HiCPlotter2.py
 # create bedgraphs for boundary scores
 set branch_short = `echo $branch | sed 's/.*results\///' | sed 's/^matrix-distnorm.[^/]\+\///'`
 set group_var = `echo $branch_short | cut -d'/' -f1 | cut -d'.' -f2`
-set bscores_branch = ../boundary-scores/results/boundary-scores.$group_var.prep_none/$branch_short
+set bscores_branch = ../boundary-scores/results/boundary-scores.$group_var.activity_500kb/$branch_short
 set cell_type = `./code/code.main/read-sample-sheet.tcsh $sheet "$objects" cell-type`
 set methods = (inter DI ratio)
 set kappas = `cd $bscores_branch/$objects[1]; ls -1 all_scores.k=*.tsv | cut -d'.' -f2`
