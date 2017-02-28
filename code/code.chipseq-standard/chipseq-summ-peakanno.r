@@ -70,16 +70,5 @@ compKEGG <- compareCluster(geneCluster   = genes,
 plot(compKEGG, showCategory = 15, font.size = 6, title = "KEGG Pathway Enrichment Analysis")
 dev.off()
 
-tryCatch({
-  genes= lapply(peakAnnoList, function(i) as.data.frame(i)$geneId)
-  pdf(file = paste0(opt$outputdir,"/venn-diagram.pdf"))
-  vennplot(genes)
-  dev.off()
- },
- error=function(e){
-  dev.off()
-  cat(conditionMessage(e),"\n")
- }
-)
 
 sessionInfo()

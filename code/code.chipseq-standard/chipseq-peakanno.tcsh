@@ -34,6 +34,9 @@ scripts-create-path $outdir/
 # -----  MAIN CODE BELOW --------------
 # -------------------------------------
 
+# filter out inputs
+ if ($include_input == 'false') set objects = `echo $objects | tr ' ' '\n' | grep -vi input`
+
 # determine input files
 set peaks = `echo $objects | tr ' ' '\n' | awk -v d=$branch '{print d"/"$0"/peaks.bed"}'`
 
