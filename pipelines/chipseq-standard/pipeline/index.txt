@@ -11,6 +11,9 @@ count_peaks
 matrices
 
 pca
+heatmaps
+peakanno
+summ-peakanno
 
 diffbind
 

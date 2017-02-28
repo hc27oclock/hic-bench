@@ -8,4 +8,5 @@ set genome_index = inputs/genomes/$genome/bowtie2.index/genome
 set align_params = "--local -x $genome_index"
 set mapq = 30
 set release = inputs/release
-
+set excluding_regions = "~gongy05/references/$genome/blacklist.bed"
+set excluding_chrom = ""

@@ -10,7 +10,9 @@ module load python/2.7.3
 set hicplotter_path = ./code/HiCPlotter2.py
 
 # create bedgraphs for boundary scores
-set bscores_branch = ../boundary-scores/results/boundary-scores.by_sample.prep_none/`echo $branch | sed 's/.*results\///' | sed 's/^matrix-distnorm.[^/]\+\///'`
+set branch_short = `echo $branch | sed 's/.*results\///' | sed 's/^matrix-distnorm.[^/]\+\///'`
+set group_var = `echo $branch_short | cut -d'/' -f1 | cut -d'.' -f2`
+set bscores_branch = ../boundary-scores/results/boundary-scores.$group_var.prep_none/$branch_short
 set cell_type = `./code/code.main/read-sample-sheet.tcsh $sheet "$objects" cell-type`
 set methods = (inter DI ratio)
 set kappas = `cd $bscores_branch/$objects[1]; ls -1 all_scores.k=*.tsv | cut -d'.' -f2`
@@ -42,7 +44,7 @@ end
 
 # regions to plot
 set regions = `cat $genome_dir/gene-name.bed | grep -wiE 'MYC|NANOG' | gtools-regions center | gtools-regions shiftp -5p -4000000 -3p +4000000 | cut -f-3 | sed 's/\t/:/' | sed 's/\t/-/'`
-set tiles = "params/regions.bed"
+set tiles = "$outdir/regions.bed"
 cat $genome_dir/gene-name.bed | grep -wiE 'MYC|NANOG' | sed 's/^/0.7\t66,80,209\t/' | tools-cols -t 2 3 4 0 1 5 >! $tiles
 set tiles_labels = "regions"
 set highlight = 0

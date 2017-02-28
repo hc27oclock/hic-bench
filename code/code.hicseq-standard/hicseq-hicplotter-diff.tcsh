@@ -30,7 +30,12 @@ scripts-create-path $outdir/
 # -------------------------------------
 
 # Create the working directory
-set workdir = $TMP/work
+if ($?TMP) then
+  set tempdir = $TMP
+else
+  set tempdir = $outdir
+endif
+set workdir = $tempdir/work
 mkdir -p $workdir
 
 # run parameter script

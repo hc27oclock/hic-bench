@@ -1,0 +1,11 @@
+PROJECT-DIR: /project/dir
+
+PROJECT-ID: Project_ID_ATAC-Seq
+
+PROJECT-ID-SHORT: ATAC-Seq_ID
+
+REPORT-AUTHOR: Yixiao Gong
+
+REPORT-AUTHOR-EMAIL: Yixiao.Gong@nyumc.org
+
+PI-NAME: Dr. X

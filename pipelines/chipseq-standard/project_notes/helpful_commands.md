@@ -52,3 +52,19 @@ mv "$tmp_dir" "${old_dir}/${tmp_basename_new}"
 
 done
 ```
+
+Get rid of all the `_Sxx` entries in the inputs sample directories
+
+```bash
+cd inputs/fastq
+bad_dirs="$(find . -maxdepth 1 -type d -name "*_S*")"
+for oldname in $bad_dirs; do 
+newname="$(echo "$oldname" | sed -e 's|\(_S[[:digit:]]*\)$||g')"; 
+mkdir -p "$newname"
+mv ${oldname}/* "${newname}/"
+rm -rf "${oldname}"
+done
+
+
+```
+

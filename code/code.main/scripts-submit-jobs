@@ -18,9 +18,10 @@ if ($max_jobs == "") set max_jobs = `cat $jobs_script | wc -l`
 
 if (`cat $jobs_script | wc -l` > 0) then
   set script_dir = `readlink -f $jobs_script | sed 's/\/[^/]\+$//'`
+  cat $jobs_script | sed 's/$/ ; sleep 10/' >! $script_dir/__run-with-wait
   set pref = $script_dir/__run_
   rm -f ${pref}*
-  split -a 10 -l $max_jobs $jobs_script $pref
+  split -a 10 -l $max_jobs $script_dir/__run-with-wait $pref
   foreach run (${pref}*)
     scripts-send2err "Running $run script..."
     chmod +x $run

@@ -1,4 +1,4 @@
-#!/usr/bin/Rscript
+#!/usr/bin/env Rscript
 
 ## USAGE: Rscript ./code/chipseq-align-stats.R $outdir $branch "$objects"
 ## DESCRIPTION: create summary tables and dual barplots to visualize alignment reads
