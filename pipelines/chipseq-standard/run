@@ -12,7 +12,6 @@ endif
 
 # shell settings
 source ./code/code.main/custom-tcshrc
-Rscript ./code/code.main/install-r-packages.r
 
 # validate sample sheet
 scripts-send2err "Validating sample sheet..."
