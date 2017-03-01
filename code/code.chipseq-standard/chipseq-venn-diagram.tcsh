@@ -46,7 +46,7 @@ set peaks = `echo $objects | tr ' ' '\n' | awk -v b=$branch '{print b"/"$1"/peak
 scripts-send2err "-- CMD: "
 
 scripts-send2err "Rscript --vanilla code/chipseq-venn-diagram.r -o $outdir $peaks $group_branch/$group_name/peaks.bed"
-#Rscript --vanilla code/chipseq-venn-diagram.r -o $outdir $peaks $group_branch/$group_name/peaks.bed
+Rscript --vanilla code/chipseq-venn-diagram.r -o $outdir $peaks $group_branch/$group_name/peaks.bed
 
 foreach file ($bed_files)
   set filename = `basename $file:r`.pdf
