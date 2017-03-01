@@ -1,5 +1,6 @@
 #!/bin/tcsh
 source ./code/code.main/custom-tcshrc      # customize shell environment
+Rscript ./code/code.main/install-r-packages.r
 
 ##
 ## USAGE: run [--dry-run]
