@@ -6,6 +6,7 @@ Rscript chipseq-venn-diagramr [OPTIONS] PEAK-FILE(s)
 suppressPackageStartupMessages(library(optparse))
 option_list <- list(
   make_option(c("-o","--outputdir"),default="./", help="output directory."),
+  make_option(c("-f","--filename"),default="venn-diagram.pdf", help="output file name"),
   make_option(c("-g","--genome"),default="./", help="annotation genome")
 )
 arguments = parse_args(args=commandArgs(trailingOnly=T), OptionParser(usage=usage,option_list=option_list), positional_arguments=c(0,Inf))
@@ -28,8 +29,9 @@ peak.Sets <- lapply(files, readPeakFile)
 
 
 tryCatch({
-  pdf(file = paste0(opt$outputdir,"/venn-diagram.pdf"), pointsize=6 )
+  pdf(file = paste0(opt$outputdir,"/",opt$filename), pointsize=6 )
   vennplot(peak.Sets)
+  title(main=opt$filename)
   dev.off()
  },
  error=function(e){

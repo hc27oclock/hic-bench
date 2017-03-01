@@ -44,9 +44,16 @@ set peaks = `echo $objects | tr ' ' '\n' | awk -v b=$branch '{print b"/"$1"/peak
 # plot annotations
 
 scripts-send2err "-- CMD: "
-scripts-send2err "Rscript --vanilla code/chipseq-venn-diagram.r -o $outdir $peaks $group_branch/$group_name/peaks.bed"
-Rscript --vanilla code/chipseq-venn-diagram.r -o $outdir $peaks $group_branch/$group_name/peaks.bed
 
+scripts-send2err "Rscript --vanilla code/chipseq-venn-diagram.r -o $outdir $peaks $group_branch/$group_name/peaks.bed"
+#Rscript --vanilla code/chipseq-venn-diagram.r -o $outdir $peaks $group_branch/$group_name/peaks.bed
+
+foreach file ($bed_files)
+  set filename = `basename $file:r`.pdf
+  scripts-send2err "Rscript --vanilla code/chipseq-venn-diagram.r -o $outdir -f $filename $peaks $group_branch/$group_name/peaks.bed $file"
+  Rscript --vanilla code/chipseq-venn-diagram.r -o $outdir -f $filename $peaks $group_branch/$group_name/peaks.bed $file
+end
+ 
 # -------------------------------------
 # -----  MAIN CODE ABOVE --------------
 # -------------------------------------
