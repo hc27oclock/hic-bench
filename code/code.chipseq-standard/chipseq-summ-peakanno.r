@@ -59,7 +59,7 @@ pdf(file = paste0(opt$outputdir,"/distribution-to-TSS.pdf"))
 plotDistToTSS(peakAnnoList,title="Distribution of peaks loci\nrelative to TSS")
 dev.off()
 
-
+tryCatch({
 pdf(file = paste0(opt$outputdir,"/KEGG-pathway.pdf"))
 genes = lapply(peakAnnoList, function(i) as.data.frame(i)$geneId)
 names(genes) = sub("_", "\n", names(genes))
@@ -69,6 +69,11 @@ compKEGG <- compareCluster(geneCluster   = genes,
                            pAdjustMethod = "BH")
 plot(compKEGG, showCategory = 15, font.size = 6, title = "KEGG Pathway Enrichment Analysis")
 dev.off()
-
+ },
+ error=function(e){
+  dev.off()
+  cat(conditionMessage(e),"\n")
+ }
+)
 
 sessionInfo()

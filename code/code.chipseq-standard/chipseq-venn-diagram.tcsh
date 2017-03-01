@@ -34,13 +34,18 @@ scripts-send2err "-- Parameters: "
 # -------------------------------------
 
 
+# extract group level peak calling result
+set group_branch = `echo $branch | sed -E 's/peaks.by_sample/peaks.by_group/'`
+set group_name = `basename $outdir`
+
 # create merged peaks reference
 set peaks = `echo $objects | tr ' ' '\n' | awk -v b=$branch '{print b"/"$1"/peaks.bed"}'`
 
 # plot annotations
 
-scripts-send2err "Rscript --vanilla code/chipseq-venn-diagram.r -o $outdir $peaks"
-Rscript --vanilla code/chipseq-venn-diagram.r -o $outdir $peaks
+scripts-send2err "-- CMD: "
+scripts-send2err "Rscript --vanilla code/chipseq-venn-diagram.r -o $outdir $peaks $group_branch/$group_name/peaks.bed"
+Rscript --vanilla code/chipseq-venn-diagram.r -o $outdir $peaks $group_branch/$group_name/peaks.bed
 
 # -------------------------------------
 # -----  MAIN CODE ABOVE --------------
