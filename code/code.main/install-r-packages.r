@@ -7,7 +7,7 @@ bioc_package_list = c("GenomicRanges", "GenomicFeatures", "ChIPseeker", "cluster
                       "wavClusteR", "DiffBind", "biomaRt", "ChIPpeakAnno",
                       "preprocessCore", "tools", "ReactomePA",
 		      "TxDb.Mmusculus.UCSC.mm9.knownGene", "TxDb.Mmusculus.UCSC.mm10.knownGene",
-		      "TxDb.Hsapiens.UCSC.hg19.knownGene", "org.Hs.eg.db", "org.mm.eg.db")
+		      "TxDb.Hsapiens.UCSC.hg19.knownGene", "org.Hs.eg.db", "org.Mm.eg.db")
 
 for (package in bioc_package_list) {
   # if(package %in% rownames(installed.packages()) == FALSE){
