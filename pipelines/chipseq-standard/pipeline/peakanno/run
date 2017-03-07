@@ -1,6 +1,5 @@
 #!/bin/tcsh
 source ./code/code.main/custom-tcshrc      # customize shell environment
-Rscript ./code/code.main/install-r-packages.r
 
 ##
 ## USAGE: run [--dry-run]
@@ -29,6 +28,12 @@ scripts-create-path $results/
 scripts-send2err "=== Operation = $op ============="
 set resources = 1
 set cmd = "./code/code.main/scripts-qsub-wrapper $resources ./code/chipseq-$op.tcsh"
+
+# check for missing packages
+source ./params/params.standard.tcsh
+scripts-send2err " R: `which R` "
+scripts-send2err " Rscript: `which Rscript` "
+Rscript ./code/code.main/install-r-packages.r
 
 # generate run script
 Rscript ./code/code.main/pipeline-master-explorer.r -v "$cmd" $results/$op "params/params.*.tcsh" "$inpdirs" "" "." 1
