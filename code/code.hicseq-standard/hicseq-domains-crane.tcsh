@@ -49,7 +49,7 @@ foreach est_mat ($est_matrices)
 
   # extract matrices from RData file
   if (`echo $est_mat | grep -c '\.RData$'` == 1) then
-    Rscript ./code/hic-matrix.r matrices -v -o $workdir/tmp $inpdir/$est_mat
+    Rscript ./code/hic-matrix.r matrices -v $hicmatrix_params -o $workdir/tmp $inpdir/$est_mat
   else
     mkdir -p $workdir/tmp
     cat $inpdir/$est_mat >! $workdir/tmp/matrix.k=001.tsv

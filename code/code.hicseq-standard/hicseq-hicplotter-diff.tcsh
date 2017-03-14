@@ -64,7 +64,7 @@ foreach f (`cd $branch/$object1; ls -1 matrix.*.tsv matrix.*.RData | grep -vwE "
     foreach mat ($workdir/tmp/matrix.*.tsv)
       set pref = `basename $mat .tsv | sed 's/^matrix\.//'`.$chr
       set inpmat = $pref.matrix.txt
-      Rscript ./code/create-hicplotter-matrix.r $workdir/$inpmat $mat
+      Rscript ./code/create-hicplotter-matrix.r $workdir/$inpmat $mat 1
     end
     rm -rf $workdir/tmp
   endif

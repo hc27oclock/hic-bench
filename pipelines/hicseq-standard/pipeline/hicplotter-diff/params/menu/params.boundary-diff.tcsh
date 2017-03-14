@@ -76,9 +76,11 @@ foreach kappa ($kappas)
 
 end
 
-# regions to plot [TODO: take only $object1.$object2 bdiff?]
-set bdiff_files = `find $bdiff_branch/ -name bdiff.k=001.tsv | grep 'T_cell-no_treat' | grep -vE 'GSI'`
-set regions = `cat $bdiff_files | grep -v ^locus | awk '$18>+0.5 || $18<-0.5' | cut -f1 | sort -u | sed 's/:/\t/' | sed 's/-/\t/' | gtools-regions -center | gtools-regions -shiftp -5p -2000000 -3p +2000000 | gtools-regions -bounds -g $genome_dir/genome.bed | sed 's/\t/:/' | sed 's/\t/-/'`
+# regions to plot
+set bdiff_files = $bdiff_branch/*/T_cell-donor*.TALL-*/all_data.k=001.tsv
+cat $bdiff_files | grep -v ^locus | awk '$2==1 || $3==1' | awk '($4>.4 && $8>.4) || ($5>.4 && $9>.4)' | cut -f1,18 | sort | tools-mergeuniq -merge | tools-vectors sum -n 3 | sort -k2,2g >! $outdir/bdiff.tsv
+set regions = `( cat $outdir/bdiff.tsv | head -100 ; cat $outdir/bdiff.tsv | tail -100 ) | cut -f1 | sort -u | sed 's/:/\t/' | sed 's/-/\t/' | gtools-regions -center | gtools-regions -shiftp -5p -2000000 -3p +2000000 | gtools-regions -bounds -g $genome_dir/genome.bed | sed 's/\t/:/' | sed 's/\t/-/'`
+echo $regions
 
 set tiles = "params/regions.bed"
 set tiles_labels = "regions"

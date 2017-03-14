@@ -1031,8 +1031,11 @@ op_normalize <- function(cmdline_args)
   }
 
   # if --replace-na is set, then replace of NA values with zero
-  if (opt$"replace-na"==TRUE) y[is.na(y)] = 0
-    
+  if (opt$"replace-na"==TRUE) {
+    if (opt$verbose) write('Replacing NA with zero...',stderr())
+    y[is.na(y)] = 0
+  }
+  
   if (opt$dist>0) {
     # rotate matrix
     if (opt$verbose) write('Rotating matrix...',stderr())

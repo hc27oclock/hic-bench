@@ -39,7 +39,8 @@ if ($#objects < 2) then
 endif 
 
 # Generate PCA plots
-./code/read-sample-sheet.tcsh $sheet "$objects" $group_var yes | awk '{print $2":"$1}' >! $outdir/labels.tsv
+set inp_var = group    # TODO: this is a hack
+./code/read-sample-sheet2.tcsh $sheet "$objects" "$inp_var $group_var" | awk '{print $2":"$1}' | sort -u >! $outdir/labels.tsv
 set K = `cd $branch/$objects[1]; ls -1 all_scores.k=*.tsv | cut -d'.' -f2`
 set methods = `cat $branch/$objects[1]/all_scores.$K[1].tsv | head -1 | cut -f2-`
 set m = 2
@@ -51,7 +52,7 @@ foreach method ($methods)
       cat $branch/$object/all_scores.$k.tsv | cut -f1,$m | sed '1d' | grep -vwE "$chrom_excluded" | sed "s/\t/\t$object\t/" >> $outdir/data.tsv
     end
     cat $outdir/data.tsv | tools-table -c -n 6 | sed 's/ *$//' | tr -s ' ' '\t' >! $outdir/matrix.$method.$k.tsv
-    scripts-perform-pca.r -v -o $outdir -L $outdir/labels.tsv --show-text --use-short-names --plain $outdir/matrix.$method.$k.tsv
+    scripts-perform-pca.r -v -o $outdir -L $outdir/labels.tsv $pca_params $outdir/matrix.$method.$k.tsv
     cp $outdir/report.qnorm.pdf $outdir/pca.$method.$k.pdf
     rm -f $outdir/data.tsv $outdir/report.*.pdf
   end

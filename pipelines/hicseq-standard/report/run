@@ -1,0 +1,38 @@
+#!/bin/tcsh
+
+##
+## USAGE: run
+##
+
+if ($#argv != 0) then
+  grep '^##' $0
+  exit
+endif
+
+set g = mm10
+set report = report
+rm -rf $report
+mkdir $report
+
+set main_branch = filter.by_sample.mapq_20/align.by_sample.bowtie2
+cp ../pipeline/filter-stats/results/filter-stats.standard/$main_branch/all-samples/counts.pdf $report/read-counts-classification.pdf
+cp ../pipeline/filter-stats/results/filter-stats.standard/$main_branch/all-samples/percent.pdf $report/read-percentages-classification.pdf
+
+cp ../pipeline/matrix-stats/results/matrix-stats.standard/matrix-filtered.by_sample.res_40kb/$main_branch/$g/all-samples/stats.pdf $report/read-average-by-distance.pdf
+
+cp ../pipeline/boundary-scores-pca/results/boundary-scores-pca.standard/boundary-scores.by_sample.prep_none/matrix-filtered.by_sample.res_40kb/$main_branch/$g/all-samples/pca.intra-left.k=001.pdf $report/pca-by-activity.pdf
+cp ../pipeline/boundary-scores-pca/results/boundary-scores-pca.standard/boundary-scores.by_sample.prep_none/matrix-filtered.by_sample.res_40kb/$main_branch/$g/all-samples/pca.ratio.k=001.pdf $report/pca-by-insulation-score.pdf
+
+cp ../pipeline/domains-stats/results/domains-stats.standard/domains.by_sample.crane.ins_0500K/matrix-filtered.by_sample.res_40kb/$main_branch/$g/all-samples/domains-stats.k=001.pdf $report/domains-stats.pdf
+
+# run latex here
+set title = `cd ..; pwd | sed 's/.*\///'`
+cat presentation.template.tex | sed "s/____PROJECT-TITLE_____/$title/g" >! presentation.tex
+pdflatex -interaction nonstopmode -file-line-error presentation.tex
+bibtex presentation.aux
+pdflatex -interaction nonstopmode -file-line-error presentation.tex
+pdflatex -interaction nonstopmode -file-line-error presentation.tex
+
+rm -rf presentation.{bbl,blg,nav,out,aux,log,ps,dvi,snm,toc}
+
+
