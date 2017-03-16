@@ -70,9 +70,15 @@ compKEGG <- compareCluster(geneCluster   = genes,
 plot(compKEGG, showCategory = 15, font.size = 6, title = "KEGG Pathway Enrichment Analysis")
 dev.off()
  },
+ warning=function(w){
+  dev.off()
+  system(paste0("rm -rf ",opt$outputdir,"/KEGG-pathway.pdf"))
+  write(conditionMessage(w),stdout())
+ },
  error=function(e){
   dev.off()
-  cat(conditionMessage(e),"\n")
+  system(paste0("rm -rf ",opt$outputdir,"/KEGG-pathway.pdf"))
+  write(conditionMessage(e),stdout())
  }
 )
 
