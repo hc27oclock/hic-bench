@@ -34,25 +34,28 @@ scripts-send2err "-- Parameters: "
 # -------------------------------------
 
 
-# extract group level peak calling result
-set group_branch = `echo $branch | sed -E 's/peaks.by_sample/peaks.by_group/'`
-set group_name = `basename $outdir`
 
 # create merged peaks reference
 set peaks = `echo $objects | tr ' ' '\n' | awk -v b=$branch '{print b"/"$1"/peaks.bed"}'`
 
-# plot annotations
+# extract group level peak calling result
+set group_branch = `echo $branch | sed -E 's/peaks.by_sample/peaks.by_group/'`
+if ( $group_branch != "") then
+  set group_name = `basename $outdir`
+  set peaks = "$peaks $group_branch/$group_name/peaks.bed"
+endif
 
-scripts-send2err "-- CMD: "
+scripts-send2err "-- CMD:"
+scripts-send2err "Rscript --vanilla code/chipseq-venn-diagram.r -o $outdir $peaks"
+Rscript --vanilla code/chipseq-venn-diagram.r -o $outdir $peaks
 
-scripts-send2err "Rscript --vanilla code/chipseq-venn-diagram.r -o $outdir $peaks $group_branch/$group_name/peaks.bed"
-Rscript --vanilla code/chipseq-venn-diagram.r -o $outdir $peaks $group_branch/$group_name/peaks.bed
-
-foreach file ($bed_files)
-  set filename = `basename $file:r`.pdf
-  scripts-send2err "Rscript --vanilla code/chipseq-venn-diagram.r -o $outdir -f $filename $peaks $group_branch/$group_name/peaks.bed $file"
-  Rscript --vanilla code/chipseq-venn-diagram.r -o $outdir -f $filename $peaks $group_branch/$group_name/peaks.bed $file
-end
+if ( $bed_files != "") then
+  foreach file ($bed_files)
+    set filename = `basename $file:r`.pdf
+    scripts-send2err "Rscript --vanilla code/chipseq-venn-diagram.r -o $outdir -f $filename $peaks $file"
+    Rscript --vanilla code/chipseq-venn-diagram.r -o $outdir -f $filename $peaks $file
+  end
+endif
  
 # -------------------------------------
 # -----  MAIN CODE ABOVE --------------

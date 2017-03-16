@@ -36,6 +36,6 @@ tryCatch({
  },
  error=function(e){
   dev.off()
-  cat(conditionMessage(e),"\n")
+  write(conditionMessage(e),stdout())
  }
 )

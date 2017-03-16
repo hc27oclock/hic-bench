@@ -38,10 +38,12 @@ scripts-create-path $outdir/
  if ($include_input == 'false') set objects = `echo $objects | tr ' ' '\n' | grep -vi input`
 
 # determine input files
-set peaks = `echo $objects | tr ' ' '\n' | awk -v d=$branch '{print d"/"$0"/peaks.bed"}'`
+if ( $objects != "" ) then
+  set peaks = `echo $objects | tr ' ' '\n' | awk -v d=$branch '{print d"/"$0"/peaks.bed"}'`
 
-scripts-send2err "Rscript --vanilla code/chipseq-peakanno.r -g $genome -d $promoter_proximal -o $outdir $peaks"
-Rscript --vanilla code/chipseq-peakanno.r -g $genome -d $promoter_proximal -o $outdir $peaks
+  scripts-send2err "Rscript --vanilla code/chipseq-peakanno.r -g $genome -d $promoter_proximal -o $outdir $peaks"
+  Rscript --vanilla code/chipseq-peakanno.r -g $genome -d $promoter_proximal -o $outdir $peaks
+endif
 
 # -------------------------------------
 # -----  MAIN CODE ABOVE --------------
