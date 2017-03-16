@@ -47,7 +47,7 @@ foreach mat ($mat_list)
   scripts-send2err "Processing input matrix $mat..."
   set mat_files = `echo $inpdirs | tr ' ' '\n' | awk -v v=$mat '{print $1 "/" v}'`
   set outmatdir = `echo $mat | sed 's/\.tsv$//' | sed 's/\.RData$//'`
-  set a = `echo "3*$#inpdirs" | bc`
+  set a = `echo "1.5*$#inpdirs" | bc`
   set mem = `./code/calc-matrix-memory.tcsh $inpdirs[1]/$mat $a 5`
   scripts-send2err "requested memory = $mem"
   set jdata = $outdir/__jdata

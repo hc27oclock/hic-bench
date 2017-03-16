@@ -1,0 +1,33 @@
+#!/bin/tcsh
+
+##
+## USAGE: pipeline-new-analysis <pipeline name> PATH-TO-NEW-ANALYSIS
+##
+## EXAMPLE: pipeline-new-analysis2 hicseq-standard /home/my_new_analysis
+##
+
+if ($#argv != 2) then
+  grep '^##' $0
+  exit
+endif
+
+set pipeline_name = $1
+set analysis_path = $2
+
+# shallow clone
+set repo_path = `readlink -f $0 | sed 's/\/[^/]\+$//'`/../..
+git clone --depth 1 $repo_path/ $analysis_path/
+
+# build code
+cd $analysis_path/code/src
+make
+
+# create various symlinks
+cd ../..
+ln -s pipelines/$pipeline_name analysis
+ln -s $repo_path/data
+
+# create fastq dir
+mkdir analysis/inputs/fastq
+
+
