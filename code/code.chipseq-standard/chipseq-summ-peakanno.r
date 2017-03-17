@@ -59,27 +59,23 @@ pdf(file = paste0(opt$outputdir,"/distribution-to-TSS.pdf"))
 plotDistToTSS(peakAnnoList,title="Distribution of peaks loci\nrelative to TSS")
 dev.off()
 
-#tryCatch({
-#pdf(file = paste0(opt$outputdir,"/KEGG-pathway.pdf"))
-#genes = lapply(peakAnnoList, function(i) as.data.frame(i)$geneId)
-#names(genes) = sub("_", "\n", names(genes))
-#compKEGG <- compareCluster(geneCluster   = genes, 
-#                           fun           = "enrichKEGG",
-#                           pvalueCutoff  = 0.05, 
-#                           pAdjustMethod = "BH")
-#plot(compKEGG, showCategory = 15, font.size = 6, title = "KEGG Pathway Enrichment Analysis")
-#dev.off()
-# },
-# warning=function(w){
-#  dev.off()
-#  system(paste0("rm -rf ",opt$outputdir,"/KEGG-pathway.pdf"))
-#  write(conditionMessage(w),stdout())
-# },
-# error=function(e){
-#  dev.off()
-#  system(paste0("rm -rf ",opt$outputdir,"/KEGG-pathway.pdf"))
-#  write(conditionMessage(e),stdout())
-# }
-#)
+tryCatch({
+pdf(file = paste0(opt$outputdir,"/KEGG-pathway.pdf"))
+genes = lapply(peakAnnoList, function(i) as.data.frame(i)$geneId)
+names(genes) = sub("_", "\n", names(genes))
+compKEGG <- compareCluster(geneCluster   = genes,
+                           fun           = "enrichKEGG",
+                           pvalueCutoff  = 0.05,
+                           pAdjustMethod = "BH")
+plot(compKEGG, showCategory = 15, font.size = 6, title = "KEGG Pathway Enrichment Analysis")
+dev.off()
+ },
+ error=function(e){
+  dev.off()
+  write(conditionMessage(e),stdout())
+ }
+)
+
+if(file.size(paste0(opt$outputdir,"/KEGG-pathway.pdf"))=="3611"){system(paste0("rm -rf ",opt$outputdir,"/KEGG-pathway.pdf"))}
 
 sessionInfo()
