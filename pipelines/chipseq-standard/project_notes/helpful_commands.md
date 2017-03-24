@@ -17,41 +17,26 @@ Find files from specific branch of a results directory and run a custom script o
 `find "$path_to_results_dir" -path "*/peaks.by_sample.macs_broad/*" -name "venn.txt" -print0 | xargs -0 $custom_script`
 
 
-Move all the pipeline results to a new directory called 'results_old'
+Backup all `results` dirs to run the pipeline fresh, except for the alignments.
 
-```
-# switch to the 'pipeline' dir
-cd ~/projects/ChIPSeq_project_2016-06-06/pipeline
+```bash
+backup_results () {
+    local results_dir="$1"
+    (
+    cd "$(dirname "$results_dir")"
+    code/file_backup.sh "$results_dir" old
+    )
+}
 
-# get a list of results directories
-FILES="$(find . -maxdepth 2 -mindepth 2 -type d -name "results" -exec readlink -f {} \; | tr '\n' ' ')"
-
-# iterate over the directories
-for i in $FILES; do
-# the old results dir
-tmp_dir="$i"
-echo "$tmp_dir"
-
-# get the basename of the dir
-tmp_basename_old="$(basename $tmp_dir)"
-echo "$tmp_basename_old"
-
-# append the timestamp
-tmp_basename_new="${tmp_basename_old}_$(date -u +%Y%m%dt%H%M)"
-echo "$tmp_basename_new"
-
-# set the path for the results_old dir
-old_dir="${tmp_dir}_old"
-echo "$old_dir"
-
-# make the results_old dir
-mkdir -p "$old_dir"
-
-# move the results dir to the results_old dir
-mv "$tmp_dir" "${old_dir}/${tmp_basename_new}"
-
+# run from the 'pipeline' dir
+pipeline$ find -maxdepth 2 -type d -name "results" ! -path "*align/*" | while read item; do
+    backup_results "$item"
 done
+
+
 ```
+
+
 
 Get rid of all the `_Sxx` entries in the inputs sample directories
 
