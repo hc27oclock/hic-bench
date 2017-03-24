@@ -21,13 +21,13 @@ Backup all `results` dirs to run the pipeline fresh, except for the alignments.
 
 ```bash
 backup_results () {
+    # function to backup the results
     local results_dir="$1"
     (
     cd "$(dirname "$results_dir")"
-    code/file_backup.sh "$results_dir" old
+    code/file_backup.sh "$(basename "$results_dir")" old
     )
 }
-
 # run from the 'pipeline' dir
 pipeline$ find -maxdepth 2 -type d -name "results" ! -path "*align/*" | while read item; do
     backup_results "$item"
