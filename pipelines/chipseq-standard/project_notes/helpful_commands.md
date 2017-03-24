@@ -53,3 +53,57 @@ done
 
 ```
 
+----
+
+If you already set up a bunch of project directories and you need to clean and re-run them all, you can use a loop like this:
+
+
+```bash
+backup_results () {
+    # function to backup the results
+    local results_dir="$1"
+    (
+    cd "$(dirname "$results_dir")"
+    code/file_backup.sh "$(basename "$results_dir")" old
+    )
+}
+
+# names of the project dirs you need to work on and submit
+my_dirs="ChIpSeq_2017-02-11_CTCF ChIpSeq_2017-02-11_H3K27AC ChIpSeq_2017-02-11_H3K27ME3 ChIpSeq_2017-02-11_H3K9AC"
+
+# clean up the results dirs
+for adir in $my_dirs; do 
+(
+cd "${adir}/pipeline"
+pwd
+find . -maxdepth 2 -type d -name "results" ! -path "*align/*" | while read item; do backup_results "$item"; done
+)
+done
+
+# check that it worked...
+for adir in $my_dirs ; do 
+(
+cd "${adir}/pipeline"
+pwd
+# run from the 'pipeline' dir
+find . -maxdepth 2 -type d -name "results" 
+)
+done
+
+# delete all the errors files
+for adir in $my_dirs ; do 
+(
+cd "${adir}/pipeline"
+find . -maxdepth 3 -type f -path "*error*" ! -path "*align/*" -delete
+)
+done
+
+
+# run the pipelines for all the projects
+for adir in $my_dirs ; do 
+(
+cd "$adir"; code/code.main/pipeline-execute "$adir" kellys04@nyumc.org
+)
+done
+```
+
