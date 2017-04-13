@@ -12,7 +12,9 @@ option_list <- list(
 arguments = parse_args(args=commandArgs(trailingOnly=T), OptionParser(usage=usage,option_list=option_list), positional_arguments=c(0,Inf))
 opt = arguments$options
 inputs = arguments$args
-if (length(inputs)<2||length(inputs)>5) { write(paste("USAGE: ",usage," #### Number of peak files supported is 2 to 5.\n",sep=''),stderr()); quit(save='no') }
+if (length(inputs) < 2 || length(inputs) > 5) {
+  write("warning: number of peak files supported is 2 to 5", stderr()); quit(save='no')
+}
 
 suppressPackageStartupMessages(library(ChIPseeker))
 suppressPackageStartupMessages(library(tools))
