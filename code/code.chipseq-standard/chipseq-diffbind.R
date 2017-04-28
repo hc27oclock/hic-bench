@@ -44,27 +44,28 @@ generateDiffBindReport = function(dba, contrast, th = 0.05, method = DBA_DESEQ2,
 
     message("[generateDiffBindReport] annotate peaks")
     db.ann.gr = annotatePeakInBatch(db.gr, AnnotationData = tss, PeakLocForDistance = "middle",
-                                    FeatureLocForDistance = "TSS", output = "shortestDistance", multiple = TRUE)
+                                    FeatureLocForDistance = "TSS", output = "shortestDistance", select = "first")
 
     # add gene symbols
     message("[generateDiffBindReport] add gene symbols")
-    db.ann.df = merge(as.data.frame(db.ann.gr) , mart.df , by.x=c("feature"), by.y=c("ensembl_gene_id") , all.x=T)
+    db.ann.df = merge(as.data.frame(db.ann.gr), mart.df, by.x = c("feature"), by.y = c("ensembl_gene_id"), all.x = TRUE)
 
     # keep just the relevant columns
     db.ann.df = db.ann.df[c(
-      "seqnames","start","end","feature","external_gene_name","gene_biotype",
-      "start_position","end_position",
-      "insideFeature","distancetoFeature","shortestDistance","fromOverlappingOrNearest")]
+      "seqnames", "start", "end", "feature", "external_gene_name", "gene_biotype",
+      "start_position", "end_position",
+      "insideFeature", "distancetoFeature", "shortestDistance", "fromOverlappingOrNearest")]
 
     # merge bed and annotations
     ann.merged = merge(as.data.frame(db.gr), db.ann.df,
-                       by.x = c("seqnames","start","end"), by.y = c("seqnames","start","end"), all = TRUE)
+                       by.x = c("seqnames", "start", "end"),
+                       by.y = c("seqnames", "start", "end"),
+                       all = TRUE)
 
     # sort
     ann.merged$seqnames = as.character(ann.merged$seqnames)
     ann.merged = ann.merged[with(ann.merged, order(seqnames, start)), ]
 
-    message("[generateDiffBindReport] save file")
     # generate file name
     th = format(th, nsmall = 2)
     contrast.name = paste0(group1, "-vs-", group2)
@@ -72,10 +73,31 @@ generateDiffBindReport = function(dba, contrast, th = 0.05, method = DBA_DESEQ2,
     {
       contrast.name = paste0(contrast.name, ".blocking")
     }
-    filename = paste0(out.dir, "/diff_bind.", contrast.name, ".q", gsub(pattern="\\.", replacement="", x=th), ".csv")
-    message("[generateDiffBindReport] save as: ", filename)
-    write.csv(ann.merged, row.names = FALSE, file = filename)
-    Sys.sleep(5)
+    filename_base = paste0(out.dir, "/diff_bind.", contrast.name, ".q", gsub("\\.", "", th))
+    filename_csv = paste0(filename_base, ".csv")
+    filename_bed = paste0(filename_base, ".bed")
+    filename_up_bed = paste0(filename_base, ".up.bed")
+    filename_dn_bed = paste0(filename_base, ".dn.bed")
+
+    # save full table
+    message("[generateDiffBindReport] save as: ", filename_csv)
+    write.csv(ann.merged, file = filename_csv, row.names = FALSE)
+    Sys.sleep(1)
+
+    # save peaks in BED format
+    bed_cols = c("seqnames", "start", "end")
+    message("[generateDiffBindReport] save as: ", filename_bed)
+    write.table(ann.merged[, bed_cols], file = filename_bed, sep = "\t",
+                row.names = FALSE, col.names = FALSE, quote = FALSE)
+    Sys.sleep(1)
+    message("[generateDiffBindReport] save as: ", filename_up_bed)
+    write.table(subset(ann.merged, Fold > 0)[, bed_cols], file = filename_up_bed, sep = "\t",
+                row.names = FALSE, col.names = FALSE, quote = FALSE)
+    Sys.sleep(1)
+    message("[generateDiffBindReport] save as: ", filename_dn_bed)
+    write.table(subset(ann.merged, Fold < 0)[, bed_cols], file = filename_dn_bed, sep = "\t",
+                row.names = FALSE, col.names = FALSE, quote = FALSE)
+    Sys.sleep(1)
   }
 }
 
