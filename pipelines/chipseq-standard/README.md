@@ -35,6 +35,12 @@ cd /path/to/<project_directory>
 
 ```
 
+# Notes
+
+## MACS
+- broad = histone
+- narrow = everything else
+
 
 # Full Walkthrough
 ## 0. Create a new analysis
