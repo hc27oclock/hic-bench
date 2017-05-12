@@ -2783,7 +2783,8 @@ op_compare <- function(cmdline_args)
       max_dist = as.integer(e1$opt$'zone-size')
     }
     if ((opt$"max-dist">0)&&(opt$"n-dist">0)) max_dist = min(max_dist,opt$"max-dist")
-    distances = max_dist                             # only one distance is allowed
+#    distances = max_dist                             # only one distance is allowed
+    distances = rev(as.integer(1:opt$"n-dist"*(max_dist/opt$"n-dist")))
 
     # open output PDF file
     pdf(paste(fout,'.pdf',sep=''));

@@ -27,7 +27,7 @@ import bisect
 import warnings
 import logging
 
-version = "0.7.1"
+version = "0.7.2 - sif"
 
 def read_HiCdata(filename,header=0,footer=0,clean_nans=True,smooth_noise=0.5,ins_window=5,rel_window=8,plotInsulation=True,plotTadDomains=False,randomBins=False):
 	
@@ -378,6 +378,8 @@ def read_genes(filename,resolution,chromosome,start,end):
 							if len(tags)>7:
 								hex = '#%02x%02x%02x' % (int(tags[7].split(',')[0]), int(tags[7].split(',')[1]), int(tags[7].split(',')[2]))
 								genes[tags[1]+'-'+tags[2]].append(hex)
+								if len(tags)>8:
+									genes[tags[1]+'-'+tags[2]].append(float(tags[8]))
 								
 					prev_start = current_start
 							
@@ -503,7 +505,7 @@ def insulation(matrix,w=5,tadRange=10,triple=False,mstart=0):
 	
 	return scores, pBorders
 
-def HiCplotter(files=[],names=[],resolution=100000,chromosome='',output='',histograms=[],histLabels=[],fillHist=[],histMax=[],verbose=False,fileHeader=0,fileFooter=0,matrixMax=0,histColors=[],barPlots=[],barLabels=[],plotGenes='',superImpose=False,\
+def HiCplotter(files=[],names=[],resolution=100000,chromosome='',output='',histograms=[],histLabels=[],fillHist=[],histMax=[],verbose=False,fileHeader=0,fileFooter=0,matrixMax=0,histColors=[],barPlots=[],barLabels=[],plotGenes='',superImpose=False,superImposeFixed=False,\
 			start=0,end=0,tileLabels=[],tilePlots=[],tileColors=[],tileText=False,arcLabels=[],arcPlots=[],arcColors=[],peakFiles=[],epiLogos='',window=5,tadRange=8,tripleColumn=False,bedFile='',barColors=[],dPixels=200,compareEx='',compareSm='',upSide=False,\
 			smoothNoise=0.5,cleanNANs=True,plotTriangular=True,plotTadDomains=False,randomBins=False,wholeGenome=False,plotPublishedTadDomains=False,plotDomainsAsBars=False,imputed=False,barMax=[],spine=False,plotDomainTicks=True,triangularHeight=False,\
 			highlights=0,highFile='',heatmapColor=3,highResolution=True,plotInsulation=True,plotCustomDomains=False,publishedTadDomainOrganism=True,customDomainsFile=[],compare=False,pair=False,domColors=[],oExtension='',geneLabels=True,dark=False):
@@ -862,7 +864,8 @@ def HiCplotter(files=[],names=[],resolution=100000,chromosome='',output='',histo
 					elif plength <= 4: plength = 2
 					else : plength/1.5
 					gdist = min(abs(nearest[gtrack][gindex]-upgene),abs(nearest[gtrack][gindex]-downgene))
-					if len(nearest[gtrack])==1: ax3.text(gstart, trackCount-gtrack+0.5, genes[item][1], fontsize=4.5/plength)
+					if len(genes[item]) > 6: ax3.text(gstart, trackCount-gtrack+0.5, genes[item][1], fontsize=genes[item][6], color=genes[item][5])
+					elif len(nearest[gtrack])==1: ax3.text(gstart, trackCount-gtrack+0.5, genes[item][1], fontsize=4.5/plength)
 					elif float(gdist)/resolution >= 2 and len(genes[item][1])<=6: ax3.text(gstart, trackCount-gtrack+0.5, genes[item][1], fontsize=4.5/plength)
 					elif float(gdist)/resolution >= 2 and len(genes[item][1])>6: ax3.text(gstart, trackCount-gtrack+0.5, genes[item][1], fontsize=3/plength)
 					elif float(gdist)/resolution < 2 and float(gdist)/resolution > 1 and len(genes[item][1])<=6: ax3.text(gstart, trackCount-gtrack+0.5, genes[item][1], fontsize=2.5/plength)
@@ -970,6 +973,7 @@ def HiCplotter(files=[],names=[],resolution=100000,chromosome='',output='',histo
 				
 				hfirst = histograms[exp].split(',')[0]
 				hsecond = histograms[exp].split(',')[1]
+				hfmin = 0;hsmin = 0; hfmax = 0; hsmax = 0;
 				
 				ax3 = plt.subplot2grid((numOfrows, 4*len(files)), (rowcounter, exp*4), rowspan=1,colspan=4,sharex=ax1)
 				ax3.get_yaxis().set_label_coords(-0.125,0.5)
@@ -981,7 +985,7 @@ def HiCplotter(files=[],names=[],resolution=100000,chromosome='',output='',histo
 				
 				if len(histColors)>0:
 					if histColors[exp].split(',')[0] != '': ax3.plot(x_comps,y_comps,color='#'+histColors[exp].split(',')[0],alpha=0.5);firstcolor='#'+histColors[exp].split(',')[0]
-				elif dark: x3.plot(x_comps,y_comps,color='white',alpha=0.5)
+				elif dark: ax3.plot(x_comps,y_comps,color='white',alpha=0.5)
 				else: ax3.plot(x_comps,y_comps,color='black',alpha=0.5)
 				
 				ax3.tick_params(axis='y', colors=firstcolor)
@@ -989,6 +993,7 @@ def HiCplotter(files=[],names=[],resolution=100000,chromosome='',output='',histo
 				if exp==0: 
 					ystart,yend = where(start,end,x_comps)
 					ymin = min(y_comps[ystart:yend])+ min(y_comps[ystart:yend])/10 if min(y_comps[ystart:yend]) < 0 else min(y_comps[ystart:yend])-min(y_comps[ystart:yend])/10
+					hfmin = ymin; hfmax = max(y_comps[ystart:yend])
 					yminlims.append(ymin)
 					if len(histMax)==0:
 						ax3.set_ylim(ymin,max(y_comps[ystart:yend])+max(y_comps[ystart:yend])/10)
@@ -1038,16 +1043,24 @@ def HiCplotter(files=[],names=[],resolution=100000,chromosome='',output='',histo
 					ystart,yend = where(start,end,x_comps)
 					ymin = min(y_comps[ystart:yend])+ min(y_comps[ystart:yend])/10 if min(y_comps[ystart:yend]) < 0 else min(y_comps[ystart:yend])-min(y_comps[ystart:yend])/10
 					yminlims.append(ymin)
+					hsmin = ymin; hsmax = max(y_comps[ystart:yend])
 					if len(histMax)==0:
 						ax3a.set_ylim(ymin,max(y_comps[ystart:yend])+max(y_comps[ystart:yend])/10)
 						ymaxlims.append(max(y_comps[ystart:yend]))
+						ax3a.text(int(start or 1)+length-length/6,max(y_comps[ystart:yend])-max(y_comps[ystart:yend])/10,histLabels[exp].split(',')[1],color=subcolor)
+					elif superImposeFixed==1:
+						ax3a.set_ylim(min(hsmin,hfmin),max(hsmax,hfmax)+max(hsmax,hfmax)/10)
+						ax3.set_ylim(min(hsmin,hfmin),max(hsmax,hfmax)+max(hsmax,hfmax)/10)
 					else:
 						ax3a.set_ylim(ymin,int(histMax[exp].split(',')[1])+int(histMax[exp].split(',')[1])/10)
-					ax3a.text(int(start or 1)+length-length/6,max(y_comps[ystart:yend])-max(y_comps[ystart:yend])/10,histLabels[exp].split(',')[1],color=subcolor)
+						ax3a.text(int(start or 1)+length-length/6,int(histMax[exp].split(',')[1])-int(histMax[exp].split(',')[1])/10,histLabels[exp].split(',')[1],color=subcolor)
 					#ax3a.set_ylabel(histLabels[exp].split(',')[1])
 				else:
 					if len(histMax)==0:
 						ax3a.set_ylim(yminlims[1],ymaxlims[1]+ymaxlims[1]/10)
+					elif superImposeFixed==1:
+						ax3a.set_ylim(min(hsmin,hfmin),max(hsmax,hfmax)+max(hsmax,hfmax)/10)
+						ax3.set_ylim(min(hsmin,hfmin),max(hsmax,hfmax)+max(hsmax,hfmax)/10)
 					else:
 						ax3a.set_ylim(ymin,int(histMax[exp].split(',')[1])+int(histMax[exp].split(',')[1])/10)
 				
@@ -1584,7 +1597,7 @@ def HiCplotter(files=[],names=[],resolution=100000,chromosome='',output='',histo
 			matrix1[(matrix1>=slow) & (matrix1<=shigh)]=1
 			matrix2[(matrix2>=slow) & (matrix2<=shigh)]=1
 
-		with np.errstate(divide='ignore',invalid='ignore'): matrix=matrix1/matrix2
+		with np.errstate(divide='ignore',invalid='ignore'): matrix=matrix1/(matrix2*1.0)
 		#matrix[np.logical_and(matrix>=0.5, matrix<=1)]=1
 		ax1 = plt.subplot2grid((numOfrows, 4*len(files)), (0, (exp+1)*4), rowspan=4,colspan=4)
 		with np.errstate(divide='ignore'): img=ax1.imshow(log2(matrix),cmap=plt.get_cmap("bwr"),origin=orientation,interpolation="nearest",extent=(int(start or 1) - 0.5,\
@@ -1808,7 +1821,7 @@ def HiCplotter(files=[],names=[],resolution=100000,chromosome='',output='',histo
 						matrix2[(matrix2>=slow) & (matrix2<=shigh)]=1
 					
 
-					with np.errstate(divide='ignore',invalid='ignore'): matrix=matrix1/matrix2
+					with np.errstate(divide='ignore',invalid='ignore'): matrix=matrix1/(matrix2*1.0)
 					
 					pax1 = plt.subplot2grid((numOfrows, 4*len(files)), (prowcounter, peer1*4), rowspan=4,colspan=4,sharex=ax1)
 					with np.errstate(divide='ignore'): img=pax1.imshow(log2(matrix),cmap=plt.get_cmap("bwr"),origin=orientation,interpolation="nearest",extent=(int(start or 1) - 0.5,\
@@ -1914,6 +1927,7 @@ if __name__=='__main__':
 	group1.add_argument('-fhist', '--fillHist', nargs='+',metavar='',default=[],help='(0:no, 1:yes)')
 	group1.add_argument('-hc', '--histColors', nargs='+',metavar='',default=[])
 	group1.add_argument('-si', '--superImpose',metavar='',type=int,default=False,help="default: 0 - enable with 1")
+	group1.add_argument('-sif', '--superImposeFixed',metavar='',type=int,default=False,help="default: 0 - enable with 1")
 	group1.add_argument('-b', '--barPlots', nargs='+',metavar='',default=[])
 	group1.add_argument('-bl', '--barLabels', nargs='+',metavar='',default=[])
 	group1.add_argument('-bc', '--barColors', nargs='+',metavar='',default=[])

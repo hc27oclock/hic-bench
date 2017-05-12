@@ -8,6 +8,7 @@ module load python/2.7.3
 
 # HiCplotter path
 set hicplotter_path = ./code/HiCPlotter2.py
+set hicplotter_params = "-hmc 1 -ptr 1"
 
 # create bedgraphs for boundary scores
 set branch_short = `echo $branch | sed 's/.*results\///' | sed 's/^matrix-distnorm.[^/]\+\///'`
