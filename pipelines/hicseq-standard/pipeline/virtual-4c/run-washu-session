@@ -1,0 +1,72 @@
+#!/bin/tcsh
+
+##
+## USAGE: run-washu-session INPDIR OUTDIR [PROJECT-NAME]
+##
+
+if ($#argv < 2) then
+  grep '^##' $0
+  exit
+endif
+
+# public folder
+set www = /ifs/data/aifantislab/external/aris
+
+# input parameters
+set inpdir = $1     # results-to-share
+set outdir = $2     # virtual-4c
+set project = $3
+if ($project == "") then
+  set project = `readlink -f inputs | sed 's/.inputs$//' | sed 's/.*\///'`
+endif
+
+# setup
+set projectdir = $www/$project
+mkdir -p $projectdir
+set cpath = `pwd`
+
+#goto json
+
+# tracks
+echo "Copying track files..."
+rm -rf $projectdir/$outdir
+mkdir $projectdir/$outdir
+module load tabix
+foreach sample (`cd $inpdir; ls -1d *`)
+  cp -R $inpdir/$sample $projectdir/$outdir
+  foreach f (`find $projectdir/$outdir -name '*.bedgraph'`)
+    bgzip $f
+    tabix -p bed $f.gz
+  end
+end
+
+# generate json file
+json:
+echo "Creating json file..."
+cd $projectdir
+echo "[\n" >! $outdir/hub.json
+foreach f ($outdir/*/*.bedgraph.gz)
+  set sample = `echo $f | sed 's/.[^/]\+$//' | sed 's/.*\///'`
+  set name = `echo $f | sed 's/.*\///' | sed 's/.bedgraph.gz$//'`-$sample
+  echo "$name"
+  echo '{\ntype:"bedgraph",\nurl:"'http://nyuepi:bl00045nyuepi@genome.med.nyu.edu/external/aifantislab/aris/$project/$f'",\nname:"'$name'",\nmode:"show",\ncolorpositive:"#cc0014",\n},\n' >> $outdir/hub.json
+end
+echo "]" >> $outdir/hub.json
+
+# set permissions
+chmod -R go=u .
+chmod -R go-w .
+
+# session info
+set y = $cpath/session-$outdir.txt
+echo Files: >! $y
+echo $projectdir/$outdir >> $y
+echo Session: >> $y
+echo 'http://nyuepi:bl00045nyuepi@genome.med.nyu.edu/external/aifantislab/aris/'$project/$outdir/hub.json >> $y
+echo
+cat $y
+echo
+
+
+
+

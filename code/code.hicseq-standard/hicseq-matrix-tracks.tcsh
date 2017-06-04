@@ -40,7 +40,22 @@ set inpdir = $branch/$object
 echo -n "" >! $outdir/track.washu.tsv
 foreach mat (`cd $inpdir; ls -1 matrix.*.tsv`)
   scripts-send2err "Processing $mat..."
-  cat $inpdir/$mat | gtools-hic convert -v --col-labels -t '	' >> $outdir/track.washu.tsv
+
+  set f = $inpdir/$mat
+  
+  # inverse-rotate matrix if necessary
+  if (`cat $f | head -1 | grep 'chr.*chr' | wc -l` == 1) then
+    set fnew = $f																											# "full" matrix
+  else
+    set fnew = $outdir/tmp-matrix.tsv
+    Rscript ./code/hic-matrix.r rotate -v --row-labels -o $fnew $f		# inverse-rotate matrix
+  endif
+
+  # convert  
+  cat $fnew | gtools-hic convert -v --col-labels -t '	' >> $outdir/track.washu.tsv
+  
+  # cleanup
+  rm -f $outdir/tmp-matrix.tsv
 end
 
 # Compress and index

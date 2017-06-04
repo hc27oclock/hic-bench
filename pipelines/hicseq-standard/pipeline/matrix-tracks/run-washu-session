@@ -1,0 +1,66 @@
+#!/bin/tcsh
+
+##
+## USAGE: run-washu INPDIR OUTDIR [PROJECT-NAME]
+##
+
+if ($#argv < 2) then
+  grep '^##' $0
+  exit
+endif
+
+# public folder
+set www = /ifs/data/aifantislab/external/aris
+
+# input parameters
+set inpdir = $1     # results-to-share
+set outdir = $2     # tracks
+set project = $3
+if ($project == "") then
+  set project = `readlink -f inputs | sed 's/.inputs$//' | sed 's/.*\///'`
+endif
+
+# setup
+set projectdir = $www/$project
+mkdir -p $projectdir
+set cpath = `pwd`
+
+#goto json
+
+# tracks
+echo "Copying track files..."
+rm -rf $projectdir/$outdir
+mkdir $projectdir/$outdir
+foreach sample (`cd $inpdir; ls -1d *`)
+  cp -R $inpdir/$sample $projectdir/$outdir
+end
+
+# generate json file
+json:
+echo "Creating json file..."
+cd $projectdir
+echo "[\n" >! $outdir/hub.json
+foreach f ($outdir/*/*.washu.tsv.gz)
+  set sample = `echo $f | sed 's/.[^/]\+$//' | sed 's/.*\///'`
+  echo $sample  
+  echo '{\ntype:"longrange",\nurl:"'http://nyuepi:bl00045nyuepi@genome.med.nyu.edu/external/aifantislab/aris/$project/$outdir/$sample/track.washu.tsv.gz'",\nname:"'$sample'",\nmode:"heatmap",\ncolorpositive:"#cc0014",\npositivefilterthreshold:0,\nnegativefilterthreshold:0,\n},\n' >> $outdir/hub.json
+end
+echo "]" >> $outdir/hub.json
+
+# set permissions
+chmod -R go=u .
+chmod -R go-w .
+
+# session info
+set y = $cpath/session-$outdir.txt
+echo Files: >! $y
+echo $projectdir/$outdir >> $y
+echo Session: >> $y
+echo 'http://nyuepi:bl00045nyuepi@genome.med.nyu.edu/external/aifantislab/aris/'$project/$outdir/hub.json >> $y
+echo
+cat $y
+echo
+
+
+
+
