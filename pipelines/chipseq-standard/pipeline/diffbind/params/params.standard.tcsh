@@ -3,6 +3,7 @@
 source ./inputs/params/params.tcsh
 
 module unload r
+module unload java
 module load r/3.3.0
 module unload zlib
 
