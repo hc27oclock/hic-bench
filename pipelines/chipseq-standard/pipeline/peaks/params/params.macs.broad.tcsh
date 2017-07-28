@@ -10,8 +10,7 @@ module load python/2.7.3
 
 set extsize = `./code/read-sample-sheet.tcsh $sheet "$objects" fragmentation-size`
 set extsize = `echo $extsize | tools-vectors m -n 0`
-set shiftsize = `echo "$extsize/2" | bc`
-set macs_params = "--nomodel --extsize=$extsize --shift -$shiftsize --bdg --SPMR"
+set caller_params = "--broad --nomodel --extsize=$extsize"
 set use_input = 'true'
 set annot_params = "annotate2 -i --upstream-dist 100000 --downstream-dist 100000 --proximal-dist 1000 $genome_dir/gene-name.bed"
 
