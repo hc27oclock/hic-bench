@@ -51,8 +51,19 @@ foreach mat (`cd $inpdir; ls -1 matrix.*.tsv`)
     Rscript ./code/hic-matrix.r rotate -v --row-labels -o $fnew $f		# inverse-rotate matrix
   endif
 
+  # scale by sequencing depth
+  set norm = 
+  if ($?scale_by_seqdepth) then
+    if (-e $branch/$object/stats.tsv) then                                                           # this will only be applied to matrix-filtered, not matrix-ic...
+      set n_reads = `cat $branch/$object/stats.tsv | grep '^ds-accepted-intra	' | cut -f2`
+      set norm_constant = `echo $n_reads/1000000000 | bc -l`
+      set norm = "-c $norm_constant"
+    endif
+  endif
+  scripts-send2err "- scaling = $norm"
+  
   # convert  
-  cat $fnew | gtools-hic convert -v --col-labels -t '	' >> $outdir/track.washu.tsv
+  cat $fnew | gtools-hic convert -v $norm --col-labels -t '	' >> $outdir/track.washu.tsv
   
   # cleanup
   rm -f $outdir/tmp-matrix.tsv

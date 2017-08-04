@@ -29,7 +29,7 @@ set tmp_resources = `echo 10000/$nthreads | bc`                                 
 set qsub_params = "-l tmp_free=${tmp_resources}M -l tmp_token=${tmp_resources}M"
  
 scripts-print-cmdline $prog $argv:q >! $jpref.sh
-qsub -cwd $qsub_params -l mem_free=$mem -l h_vmem=$mem -l mem_token=$mem -o :$jpref.out -e :$jpref.err -pe threaded $nthreads $jpref.sh >! $jpref.jid
+qsub -q all.q -cwd $qsub_params -l mem_free=$mem -l h_vmem=$mem -l mem_token=$mem -o :$jpref.out -e :$jpref.err -pe threaded $nthreads $jpref.sh >! $jpref.jid
 cat $jpref.jid | cut -d' ' -f3
 
 
