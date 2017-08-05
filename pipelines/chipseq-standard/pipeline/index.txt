@@ -12,7 +12,6 @@ matrices
 
 pca
 heatmaps
-peakanno
 summ-peakanno
 venn-diagram
 
