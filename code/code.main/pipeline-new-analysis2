@@ -25,7 +25,7 @@ make
 # create various symlinks
 cd ../..
 ln -s pipelines/$pipeline_name analysis
-ln -s $repo_path/data
+#ln -s $repo_path/data
 
 # create fastq dir
 mkdir analysis/inputs/fastq

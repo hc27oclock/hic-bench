@@ -15,7 +15,7 @@ results
 *.Rproj
 misc/misc_files/
 .Rhistory
-data
+#data
 misc_files
 fix_install.R
 pipelines/data
