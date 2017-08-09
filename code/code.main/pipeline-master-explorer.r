@@ -109,7 +109,9 @@ create_output_objects = function(inp_db, sample_sheet, out_obj_var, split_var)
   obj_db = as.data.frame(cbind(inp_db,"out-obj-var"=out_obj_var,"split-var"=split_var))
   if (split_var=="") obj_db = cbind(obj_db,"split-value"="")
   L = split(obj_db,obj_db$"inp-obj-var")                                                                              # separate matrices of different inp-obj-var
-  f1 = function(a) { merge(L[[a]],cbind("inp-object"=sample_sheet[,a],"out-object"=sample_sheet[,out_obj_var])) }
+  f1a = function(a) { merge(L[[a]],cbind("inp-object"=sample_sheet[,a],"out-object"=sample_sheet[,out_obj_var])) }
+  f1b = function(a) { cbind(L[[a]],"out-object"=L[[a]]$"inp-object") }
+  f1 = function(a) { if (a==out_obj_var) { return(f1b(a)) } else { return(f1a(a)) } }
   f2 = function(a) { merge(L[[a]],cbind("inp-object"=sample_sheet[,a],"split-value"=sample_sheet[,split_var])) }
   for (a in names(L)) {
     L[[a]] = f1(a)                                                                                                    # merge obj matrix with inp-obj-var/out-obj-var columns from sample sheet
