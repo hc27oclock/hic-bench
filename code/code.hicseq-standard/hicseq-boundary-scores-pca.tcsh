@@ -39,8 +39,13 @@ if ($#objects < 2) then
 endif 
 
 # Generate PCA plots
-set inp_var = group    # TODO: this is a hack
-./code/read-sample-sheet2.tcsh $sheet "$objects" "$inp_var $group_var" | awk '{print $2":"$1}' | sort -u >! $outdir/labels.tsv
+foreach inp_var (sample group)
+  set n = `./code/read-sample-sheet2.tcsh $sheet "$objects" "$inp_var $group_var" | wc -l`
+  if ($n > 0) then
+    ./code/read-sample-sheet2.tcsh $sheet "$objects" "$inp_var $group_var" | awk '{print $2":"$1}' | sort -u >! $outdir/labels.tsv
+    break
+  endif
+end
 set K = `cd $branch/$objects[1]; ls -1 all_scores.k=*.tsv | cut -d'.' -f2`
 set methods = `cat $branch/$objects[1]/all_scores.$K[1].tsv | head -1 | cut -f2-`
 set m = 2
