@@ -83,11 +83,16 @@ generate_command <- function(v)
 ## 
 ## combn_obj
 ##
-combn_obj = function(mat,tuples) {
-  mat1 = aggregate(mat,by=list(mat[,"out-object"]),FUN=function(x) paste(unique(x),collapse=','))[-1]                                   # aggregate entries by output-object
+combn_obj = function(mat,tuples,filter_tuples) {
+  mat1 = aggregate(mat,by=list(mat[,"out-object"]),FUN=function(x) paste(unique(x),collapse=','))[-1]       # aggregate entries by output-object
   if (tuples>0) {
-    inp_obj_grid = as.matrix(expand.grid(rep(list(mat1[,"inp-object"]),tuples)))                                                        # (input-objects)^N
-    out_obj_grid = as.matrix(expand.grid(rep(list(mat1[,"out-object"]),tuples)))                                                        # (output-objects)^N
+    inp_obj_grid = as.matrix(expand.grid(rep(list(mat1[,"inp-object"]),tuples)))                            # (input-objects)^N
+    out_obj_grid = as.matrix(expand.grid(rep(list(mat1[,"out-object"]),tuples)))                            # (output-objects)^N
+    if ((tuples==2)&(filter_tuples==TRUE)) {																																# filter out tuples that are not sorted alphabetically
+      f = function(mat) { mat[apply(mat,1,function(v) v[1]<v[2]),,drop=FALSE] }
+      inp_obj_grid = f(inp_obj_grid)
+      out_obj_grid = f(out_obj_grid)
+    }
     obj_mapping = cbind("out-object"=apply(out_obj_grid,1,paste,collapse='.'),"inp-object"=apply(inp_obj_grid,1,paste,collapse=' '))    # input-output object mapping
     out = obj_mapping
     for (k in setdiff(colnames(mat1),c("inp-object","out-object","out-branch-short"))) { out = cbind(out,mat1[1,k]); colnames(out)[ncol(out)] = k }
@@ -102,7 +107,7 @@ combn_obj = function(mat,tuples) {
 ##
 ## create_output_objects
 ##
-create_output_objects = function(inp_db, sample_sheet, out_obj_var, split_var)
+create_output_objects = function(inp_db, sample_sheet, out_obj_var, split_var, filter_tuples)
 {
   # split obj-db by inp-obj-var
   if (opt$verbose) write(paste("Splitting objects by '",split_var,"' and grouping by '",out_obj_var,"'...",sep=''),stderr())
@@ -125,7 +130,7 @@ create_output_objects = function(inp_db, sample_sheet, out_obj_var, split_var)
   L = split(obj_db,obj_db$"out-branch-short")                                                                         # separate entries that have different short output branch
 
   # run combn on list elements and collect results into a single table
-  obj_db = do.call(rbind,lapply(L,combn_obj,tuples=ifelse(out_obj_var=="*",0,tuples)))
+  obj_db = do.call(rbind,lapply(L,combn_obj,tuples=ifelse(out_obj_var=="*",0,tuples),filter_tuples))
   
   return(obj_db)
 }
@@ -151,7 +156,8 @@ option_list <- list(
   make_option(c("--exclude-branch"), default="", help="Regular expression for excluding input branches [default \"%default\"]."),
   make_option(c("--include-obj"), default="", help="Regular expression for including input objects [default \"%default\"]."),
   make_option(c("--exclude-obj"), default="", help="Regular expression for excluding input objects [default \"%default\"]."),
-  make_option(c("--exclude-outdir"), default="", help="Regular expression for excluding output directories [default \"%default\"].")
+  make_option(c("--exclude-outdir"), default="", help="Regular expression for excluding output directories [default \"%default\"]."),
+  make_option(c("--filter-tuples"), action="store_true",default=FALSE, help="Filter out tuples that are not sorted alphabetically.")
 )
   
 # get command line options (if help option encountered print help and exit)
@@ -236,11 +242,11 @@ if ((out_obj_vars=="*")&&(split_var=="")) {
 # check if out-object-variable is "." (i.e. output objects are the same as input objects)
 } else if (out_obj_vars==".") {
   obj_db = split(obj_db,obj_db$"inp-obj-var",drop=TRUE)                   # first, split objects by input variable
-  obj_db = do.call(rbind, lapply(names(obj_db), function(inp_obj_var) create_output_objects(inp_db=obj_db[[inp_obj_var]],sample_sheet=sample_sheet,out_obj_var=inp_obj_var,split_var=split_var)))
+  obj_db = do.call(rbind, lapply(names(obj_db), function(inp_obj_var) create_output_objects(inp_db=obj_db[[inp_obj_var]],sample_sheet=sample_sheet,out_obj_var=inp_obj_var,split_var=split_var,filter_tuples=opt$"filter-tuples")))
 
 } else {
   L = unlist(strsplit(out_obj_vars,split=' '))
-  obj_db = do.call(rbind, lapply(L, function(out_obj_var) create_output_objects(inp_db=obj_db,sample_sheet=sample_sheet,out_obj_var=out_obj_var,split_var=split_var)))
+  obj_db = do.call(rbind, lapply(L, function(out_obj_var) create_output_objects(inp_db=obj_db,sample_sheet=sample_sheet,out_obj_var=out_obj_var,split_var=split_var,filter_tuples=opt$"filter-tuples")))
 }
 
 # add parameters
