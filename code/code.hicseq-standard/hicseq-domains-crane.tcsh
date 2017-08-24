@@ -73,7 +73,8 @@ end
 # Collect domains from all chromosomes
 set K = `ls -1 $outdir/*/*k=*.bed | sed "s/.*k=//" | cut -d'.' -f1 | sort -u`
 foreach k ($K)
-  cat $outdir/*/k=$k.*.bed | grep -v track | gtools-regions shift -start -1 -stop -1 | gtools-regions inv -g $genome_dir/genome.bed | cut -f-3 | sed 's/^chr//g' | sed 's/^X	/23	/g' | sort -k1,1n -k2,2n | sed 's/^23	/X	/g' | sed 's/^/chr/g' >! $outdir/domains.k=$k.bed
+  cat $workdir/k=$k.*.bed | grep -v track | gtools-regions shift -start -1 -stop -1 | gtools-regions inv -g $genome_dir/genome.bed | cut -f-3 | sed 's/^chr//g' | sed 's/^X	/23	/g' | sort -k1,1n -k2,2n | sed 's/^23	/X	/g' | sed 's/^/chr/g' >! $outdir/domains.k=$k.bed
+  cat $workdir/k=$k.*.insulation.bedGraph | grep -v ^track | sort -k1,1 -k2,2n >! $outdir/score.k=$k.bedgraph
 end
 
 # remove unused files

@@ -12,4 +12,5 @@ for (p in packages)
     install.packages(p, repos="http://cran.us.r-project.org")
   }
   
+install.packages('code/hicrep_1.0.1.tar.gz')
 

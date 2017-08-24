@@ -36,31 +36,26 @@ foreach f (`cd $branch/$object1; ls -1 matrix.*.tsv matrix.*.RData | grep -vwE "
   set chr = `echo $f | cut -d'.' -f2`
   scripts-send2err "Processing matrix $f..."
   if ((-e $branch/$object1/$f) && (-e $branch/$object2/$f)) then
+    # setup job
     set jpref = $outdir/__jdata/job.$chr
     scripts-create-path $jpref
     set chr_size = `cat $genome_dir/genome.bed | grep "^$chr	" | gtools-regions n | cut -f2`
     set n_bins = `echo $chr_size/$bin_size+1 | bc`
-    set mem = `echo "100*2.0*$n_bins*$n_bins/1000000000+5" | bc`G                 # TODO: for estimated RData matrices, memory should take into account the number of lambdas...
-    #set mem = 200G
+    set mem = `echo "100*2.0*$n_bins*$n_bins/1000000000+5" | bc`G
     scripts-send2err "-- requested memory = $mem"
-    set jid = ($jid `scripts-qsub-run $jpref 1 $mem Rscript ./code/hic-matrix.r compare -v -o $outdir/$chr $compare_params $branch/$object1/$f $branch/$object2/$f`)
+    
+    # compare matrices
+    set jid = ($jid `scripts-qsub-run $jpref 1 $mem ./code/run-hicrep.tcsh $outdir/out.$chr $branch/$object1/$f $branch/$object2/$f $bin_size $max_dist`)
   endif
 end
 scripts-send2err "Waiting for all jobs [$jid] to complete..."
 scripts-qsub-wait "$jid"
 
-# Collect all correlation coefficients along with sample and lambda info
-set comp = `basename $outdir`
-set methods = `cd $outdir; ls -1 *.cor.*.tsv | sed 's/[^.]\+\.cor\.//' | sed 's/\.tsv$//' | sort -u`
-set header = `cd $outdir; cat *.cor.*.tsv | head -1 | cut -f2-`
-foreach method ($methods)
-  echo "SAMPLE-1 SAMPLE-2 COMPARISON METHOD CHROMOSOME LAMBDA $header" | tr ' ' '\t' >! $outdir/cor.$method.tsv
-  foreach f ($outdir/*.cor.$method.tsv)
-    set chr = `basename $f | cut -d'.' -f1`
-    cat $f | scripts-skipn 1 | sed "s/^/$object1\t$object2\t$comp\t$method\t$chr\t/" >> $outdir/cor.$method.tsv
-  end
-  rm -f $outdir/*.cor.$method.tsv
-end 
+# Collect comparisons of all chromosomes into one single file
+echo "SAMPLE-1 SAMPLE-2 CHROMOSOME LAMBDA VALUE" | tr ' ' '\t' >! $outdir/compare.tsv
+cat $outdir/out.*/compare.tsv >> $outdir/compare.tsv
+# Clean-up
+rm -rf $outdir/out.*
 
 # -------------------------------------
 # -----  MAIN CODE ABOVE --------------
