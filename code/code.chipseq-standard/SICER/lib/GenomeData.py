@@ -48,6 +48,9 @@ mm9_chroms = ['chr1','chr2','chr3','chr4','chr5','chr6','chr7','chr8','chr9',
              'chr10','chr11','chr12','chr13','chr14','chr15','chr16','chr17',
              'chr18','chr19','chrX', 'chrY', 'chrM']
 
+mm10_chroms = ['chr1','chr2','chr3','chr4','chr5','chr6','chr7','chr8','chr9',
+             'chr10','chr11','chr12','chr13','chr14','chr15','chr16','chr17',
+             'chr18','chr19','chrX', 'chrY', 'chrM']
 
 rn4_chroms = ['chr1','chr2','chr3','chr4','chr5','chr6','chr7','chr8','chr9',
 	     'chr10','chr11','chr12','chr13','chr14','chr15','chr16','chr17',
@@ -91,6 +94,16 @@ mm9_chrom_lengths = {'chr1':197195432, 'chr2':181748087, 'chr3':159599783,
                      'chr16':98319150, 'chr17':95272651, 'chr18':90772031,
                      'chr19':61342430, 'chrX':166650296, 'chrY':15902555,
                      'chrM':16299}
+
+mm10_chrom_lengths = {'chr1':195471971, 'chr2':182113224, 'chr3':160039680,
+                     'chr4':156508116, 'chr5':151834684, 'chr6':149736546,
+                     'chr7':145441459, 'chr8':129401213, 'chr9':124595110,
+                     'chr10':130694993, 'chr11':122082543, 'chr12':120129022,
+                     'chr13':120421639, 'chr14':124902244, 'chr15':104043685, 
+                     'chr16':98207768, 'chr17':94987271, 'chr18':90702639,
+                     'chr19':61431566, 'chrX':171031299, 'chrY':91744698,
+                     'chrM':16299}
+
 
 rn4_chrom_lengths = {'chr1':267910886, 'chr2':258207540, 'chr3':171063335,
 		     'chr4':187126005, 'chr5':173096209, 'chr6':147636619,
@@ -164,6 +177,7 @@ tair8_chrom_lengths = {'chr1':30427671, 'chr2':19698289, 'chr3':23459830,
 
 species_chroms = {'mm8':mm8_chroms, 
 			'mm9':mm9_chroms, 
+			'mm10':mm10_chroms, 
 			'hg18':hg18_chroms,
 			'hg19':hg19_chroms,
 		  	"dm2":dm2_chroms, 
@@ -177,6 +191,7 @@ species_chroms = {'mm8':mm8_chroms,
 
 species_chrom_lengths={'mm8':mm8_chrom_lengths,
 		       'mm9':mm9_chrom_lengths,
+		       'mm10':mm10_chrom_lengths,
 		       'hg18':hg18_chrom_lengths,
 		       'hg19':hg19_chrom_lengths,
 		       'dm2':dm2_chrom_lengths,
