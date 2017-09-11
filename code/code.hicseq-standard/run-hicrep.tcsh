@@ -23,8 +23,8 @@ mkdir -p $outdir
 
 # extract matrices from RData file
 set tmpdir = $outdir
-Rscript ./code/hic-matrix.r matrices -v -o $tmpdir/mat1 $mat1
-Rscript ./code/hic-matrix.r matrices -v -o $tmpdir/mat2 $mat2
+Rscript ./code/hic-matrix.r matrices -v --reverse-log2 -o $tmpdir/mat1 $mat1
+Rscript ./code/hic-matrix.r matrices -v --reverse-log2 -o $tmpdir/mat2 $mat2
 
 wc -l $tmpdir/mat?/*
 
