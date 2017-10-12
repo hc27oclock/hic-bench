@@ -2139,6 +2139,9 @@ IdentifyDomains = function(est, opt, full_matrix)
       rownames(z) = colnames(z) = rownames(est$y)
     }
     
+    # replace NAs with zero
+    z[is.na(z)==TRUE] = 0
+
     # first, calculate all scores (all methods)
     dom$scores[[k]] = MatrixBoundaryScores(z,distance=opt$distance,d2=opt$distance2,skip=opt$'skip-distance')
     dom$scores[[k]][est$ignored_rows,] = NA

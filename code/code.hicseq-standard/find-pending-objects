@@ -1,0 +1,22 @@
+#!/bin/tcsh
+
+##
+## USAGE: find-pending-objects RESULTS-DIR
+##
+
+if ($#argv != 1) then
+  grep '^##' $0
+  exit
+endif
+
+set R = $1
+
+set D = `cat $R/.db/db.tsv | skipn 1 | grep -vw missing-inputs | cut -f6`
+
+foreach d ($D)
+  if ((! -e $d/job.vars.tsv) && (-e $d/job.id)) then 
+    echo $d
+  endif
+end
+
+
