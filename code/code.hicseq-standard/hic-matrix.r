@@ -2072,6 +2072,7 @@ IdentifyDomains = function(est, opt, full_matrix)
   {
     # randomize matrix and recompute scores
     if (opt$verbose) write('Randomizing input matrix...',stderr())
+    z[is.na(z)==TRUE] = 0
     if (length(ignored_rows)>0) {
       z_rnd = MatrixRotate45(z[-ignored_rows,-ignored_rows],opt$distance)
     } else {
@@ -2129,19 +2130,17 @@ IdentifyDomains = function(est, opt, full_matrix)
     if (opt$verbose) write(paste('-- matrix #',k,'...',sep=''),stderr())
 
     # process matrix
+    z = est$solObj[k,,]
     if (full_matrix) {
-      z = est$solObj[k,,]
       rownames(z) = rownames(est$y)
       colnames(z) = colnames(est$y)
     } else {
       if (opt$verbose) write('Inverse-rotating input matrices...',stderr())
-      z = MatrixInverseRotate45(est$solObj[k,,])
+      z[is.na(z)==TRUE] = 0
+      z = MatrixInverseRotate45(z)
       rownames(z) = colnames(z) = rownames(est$y)
     }
     
-    # replace NAs with zero
-    z[is.na(z)==TRUE] = 0
-
     # first, calculate all scores (all methods)
     dom$scores[[k]] = MatrixBoundaryScores(z,distance=opt$distance,d2=opt$distance2,skip=opt$'skip-distance')
     dom$scores[[k]][est$ignored_rows,] = NA
