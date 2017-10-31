@@ -496,7 +496,8 @@ PreprocessMatrix <- function(x,preprocess,pseudo=1,cutoff=0,max_dist=NA)
     y = log2(y)
   } else if ((preprocess=="zscore")|(preprocess=="log2-zscore")) {
     full_matrix = is_full_matrix(x)
-    if (full_matrix) { y = MatrixRotate45(x,max_dist) } else { y = x }                         # rotate matrix, if input is full matrix
+    y = x
+    if (full_matrix) { y[is.na(y)] = 0; y = MatrixRotate45(y,max_dist) }                       # rotate matrix, if input is full matrix
     i = 1; j = 3; while (j<=ncol(y)) { y[i,j:ncol(y)] = NA; i = i + 1; j = j + 2 }
     i = nrow(y); j = 2; while (j<=ncol(y)) { y[i,j:ncol(y)] = NA; i = i - 1; j = j + 2 }
     if (preprocess=="log2-zscore") { y[y<=0] = NA; y = log2(y) }                               # log2-transform, if log2-zscore
@@ -508,7 +509,8 @@ PreprocessMatrix <- function(x,preprocess,pseudo=1,cutoff=0,max_dist=NA)
     if (full_matrix) y = MatrixInverseRotate45(y)                                              # inverse rotate, if input is full matrix
   } else if (preprocess=="zscore-adj") {
     full_matrix = is_full_matrix(x)
-    if (full_matrix) { y = MatrixRotate45(x,max_dist) } else { y = x }                         # rotate matrix, if input is full matrix
+    y = x
+    if (full_matrix) { y[is.na(y)] = 0; y = MatrixRotate45(y,max_dist) }                       # rotate matrix, if input is full matrix
     i = 1; j = 3; while (j<=ncol(y)) { y[i,j:ncol(y)] = NA; i = i + 1; j = j + 2 }
     i = nrow(y); j = 2; while (j<=ncol(y)) { y[i,j:ncol(y)] = NA; i = i - 1; j = j + 2 }
     if (preprocess=="log2-zscore") { y[y<=0] = NA; y = log2(y) }                               # log2-transform, if log2-zscore
@@ -1662,6 +1664,8 @@ op_matrices <- function(cmdline_args)
     make_option(c("-v","--verbose"), action="store_true",default=FALSE, help="Print more messages."),
     make_option(c("-o","--output-dir"), default="", help="Output directory (required) [default \"%default\"]."),
     make_option(c("--reverse-log2"), action="store_true",default=FALSE, help="Reverse log2/pseudo-count transformation (if applicable)."),
+    make_option(c("--zscore-adj"), action="store_true",default=FALSE, help="Distance normalize using adjusted z score."),
+    make_option(c("--max-dist"), default=1, help="Maximum distance (applicable only for zscore normalization) [default=%default]."),
     make_option(c("--min-lambda"), default=0.0, help="Minimum value for parameter lambda [default=%default]."),
     make_option(c("--max-lambda"), default=1.0, help="Maximum value for parameter lambda [default=%default]."),
     make_option(c("--n-lambda"), default=6, help="Number of lambdas [default=%default]."),
@@ -1703,7 +1707,8 @@ op_matrices <- function(cmdline_args)
     n_matrices = length(lambdas)
     for (k in 1:n_matrices) {
       z = GetSolution(e$solObj,n_rows=nrow(e$y),invrotate=invrotate,lambda=lambdas[k],gamma=opt$gamma)
-      if ((opt$'reverse-log2'==TRUE)&(e$opt$'preprocess'=='log2')) z = 2^z - e$opt$'pseudo' 
+      if ((opt$'reverse-log2'==TRUE)&(e$opt$'preprocess'=='log2')) { write("Applying reverse log2 transformation...",stderr()); z = 2^z - e$opt$'pseudo' }
+      if (opt$'zscore-adj'==TRUE) { write("Applying distance normalization...",stderr()); z = PreprocessMatrix(z,'zscore-adj',max_dist=opt$'max-dist') } 
       rownames(z) = colnames(z) = rownames(e$y)
       fout = paste(out_dir,'/matrix.k=',formatC(k,width=3,format='d',flag='0'),'.tsv',sep='')
       write.table(format(z,scientific=TRUE,digits=4),row.names=TRUE,col.names=is_full_matrix(z),quote=FALSE,sep='\t',file=fout)
@@ -1715,7 +1720,8 @@ op_matrices <- function(cmdline_args)
     n_matrices = dim(e$solObj)[1]
     for (k in 1:n_matrices) {
       z = e$solObj[k,,]
-      if ((opt$'reverse-log2'==TRUE)&(e$opt$'preprocess'=='log2')) z = 2^z - e$opt$'pseudo' 
+      if ((opt$'reverse-log2'==TRUE)&(e$opt$'preprocess'=='log2')) { write("Applying reverse log2 transformation...",stderr()); z = 2^z - e$opt$'pseudo' }
+      if (opt$'zscore-adj'==TRUE) { write("Applying distance normalization...",stderr()); z = PreprocessMatrix(z,'zscore-adj',max_dist=opt$'max-dist') } 
       if (invrotate==TRUE) z = MatrixInverseRotate45(z)
       rownames(z) = colnames(z) = rownames(e$y)
       fout = paste(out_dir,'/matrix.k=',formatC(k,width=3,format='d',flag='0'),'.tsv',sep='')

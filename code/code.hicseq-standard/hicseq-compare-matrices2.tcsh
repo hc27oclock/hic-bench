@@ -45,7 +45,7 @@ foreach f (`cd $branch/$object1; ls -1 matrix.*.tsv matrix.*.RData | grep -vwE "
     scripts-send2err "-- requested memory = $mem"
     
     # compare matrices
-    set jid = ($jid `scripts-qsub-run $jpref 1 $mem ./code/run-hicrep.tcsh $outdir/out.$chr $branch/$object1/$f $branch/$object2/$f $bin_size $max_dist`)
+    set jid = ($jid `scripts-qsub-run $jpref 1 $mem ./code/run-hicrep.tcsh $outdir/out.$chr $branch/$object1/$f $branch/$object2/$f $bin_size $max_dist $prep`)
   endif
 end
 scripts-send2err "Waiting for all jobs [$jid] to complete..."

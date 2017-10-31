@@ -2,10 +2,10 @@
 source ./code/code.main/custom-tcshrc     # shell settings
 
 ##
-## USAGE: run-hicrep.tcsh OUTPUT-DIR MATRIX-1 MATRIX-2 BIN-SIZE MAX-DIST
+## USAGE: run-hicrep.tcsh OUTPUT-DIR MATRIX-1 MATRIX-2 BIN-SIZE MAX-DIST PREP={none,distnorm}
 ##
 
-if ($#argv != 5) then
+if ($#argv != 6) then
   grep '^##' $0
   exit
 endif
@@ -15,6 +15,7 @@ set mat1 = $2
 set mat2 = $3
 set bin_size = $4
 set max_dist = $5
+set prep = $6
 
 set max_dist_bite = `echo ${max_dist}\*${bin_size} | bc`
 
@@ -23,8 +24,13 @@ mkdir -p $outdir
 
 # extract matrices from RData file
 set tmpdir = $outdir
-Rscript ./code/hic-matrix.r matrices -v --reverse-log2 -o $tmpdir/mat1 $mat1
-Rscript ./code/hic-matrix.r matrices -v --reverse-log2 -o $tmpdir/mat2 $mat2
+if ($prep == 'distnorm') then
+  set opt = "--zscore-adj --max-dist=$max_dist"
+else
+  set opt = 
+endif
+Rscript ./code/hic-matrix.r matrices -v --reverse-log2 $opt -o $tmpdir/mat1 $mat1
+Rscript ./code/hic-matrix.r matrices -v --reverse-log2 $opt -o $tmpdir/mat2 $mat2
 
 wc -l $tmpdir/mat?/*
 

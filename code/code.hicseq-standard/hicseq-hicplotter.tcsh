@@ -109,8 +109,7 @@ foreach region ($regions)
   endif
   set hicplotter_abs_path = `readlink -f $hicplotter_path`
   cd $workdir
-  echo python $hicplotter_abs_path -v -f $hic_matrices -n $region_labels -chr $chrom -s $start_bin -e $stop_bin -r $bin_size -o $region -t $all_tiles -tl $all_tiles_labels -hist $bedgraphs -hl $bedgraph_labels -fh $fileheader -pi $insulation_score $highlight_opt $hicplotter_params
-  python $hicplotter_abs_path -v -f $hic_matrices -n $region_labels -chr $chrom -s $start_bin -e $stop_bin -r $bin_size -o $region -t $all_tiles -tl $all_tiles_labels -hist $bedgraphs -hl $bedgraph_labels -fh $fileheader -pi $insulation_score $highlight_opt $hicplotter_params
+  python $hicplotter_abs_path -v -f $hic_matrices -n $region_labels -chr $chrom -s $start_bin -e $stop_bin -r $bin_size -o $region -t $all_tiles -tl $all_tiles_labels -hist $bedgraphs -hl $bedgraph_labels -fh $fileheader -pi $insulation_score $highlight_opt $hicplotter_params #-ext pdf
   cd $p
 end
 

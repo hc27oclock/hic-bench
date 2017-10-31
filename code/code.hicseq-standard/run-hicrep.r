@@ -33,8 +33,12 @@ max_dist=as.integer(opt$maxdist)
 
 # for hicrep version 1.0.1
 
-HiCR1=read.table(inputs[1], header = F, sep = "\t", skip = 1) %>% select(-V1) %>% set_colnames(paste0("V",4+seq(1:(dim(.)[2])))) %>% sapply(as.numeric)
-HiCR2=read.table(inputs[2], header = F, sep = "\t", skip = 1) %>% select(-V1) %>% set_colnames(paste0("V",4+seq(1:(dim(.)[2])))) %>% sapply(as.numeric)
+HiCR1=as.matrix(read.table(inputs[1], header=T, check.names=F))
+HiCR2=as.matrix(read.table(inputs[2], header=T, check.names=F))
+
+# replace NAs with zeros
+HiCR1[is.na(HiCR1)] = 0
+HiCR2[is.na(HiCR2)] = 0
 
 if(opt$minreads=="inf"){
   min_reads=as.integer("2000000")
