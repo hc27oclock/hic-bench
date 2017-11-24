@@ -7,7 +7,7 @@
 *.o
 *.so
 code/bin/*
-data/*
+data-repo/*
 analyses/*
 results
 .nfs*
@@ -15,7 +15,5 @@ results
 *.Rproj
 misc/misc_files/
 .Rhistory
-data
 misc_files
 fix_install.R
-pipelines/data
