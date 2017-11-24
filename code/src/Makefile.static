@@ -8,7 +8,7 @@
 
 # Macros
 
-BINDIR = ../bin
+BINDIR = ../code.main
 CC = g++ 
 CFLAGS = -O3 -g -Wall -static
 INCLUDE = -I. -Isamtools
