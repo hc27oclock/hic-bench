@@ -1,0 +1,187 @@
+#!/bin/bash
+##
+# run hic pipeline
+##
+
+#### set path of the pipeline
+bdir=`dirname $0`
+
+#### useage
+red='\033[0;31m'
+blue='\033[1;34m'
+green='\033[1;32m'
+NC='\033[0m' # No Color
+options_help="
+${red}Command line${NC}: ${green}
+    hicapp_preprocess [options] [-1 <mate_1_fastq_file>] [-2 <mate_2_fastq_file>]
+                                [-g <genome_fasta_file>] [-e <restriction_enzyme_info>]
+
+${red}Required${NC}: ${green}
+    -1 | --r1-file:         mate 1 fastq file (recommanded: *_R1.fq.gz)
+    -2 | --r2-file:         mate 2 fastq file (recommanded: *_R2.fq.gz)
+    -g | --genome-file:     genome fasta file (recommanded: hg19.fa, and
+                            chromosome name is better to be like chr1, chr2..., and
+                            bowtie2 index file has to be in the same folder: hg19.1.bt2...)
+    -e | --enzyme-info:     restriction enzyme information (e.g.: ^GATC,MboI or A^AGCTT,HindIII
+                            or A^GATCT,BglII:A^AGCTT,HindIII for two enzymes)
+${NC}
+
+${red}Options${NC}: ${green}
+    -p | --threads:         Number of threads used for mapping
+    -o | --outprefix:       Output file prefix
+    -h | --help:            help
+${NC}
+"
+usage () {
+	echo -e "\n${red}Usage${NC}: ${green}`basename $0` -h for help${NC}"
+	echo -e "$options_help"
+	exit 1
+}
+
+
+#### set defalt arguments
+mapping_threads=2
+sampleprefix=""
+
+# read the options
+TEMP=`getopt -o 1:2:g:e:p:o:h --long r1-file:,r2-file:,genome-file:,enzyme-info:,threads:,outprefix:,help -n 'hicapp_preprocess' -- "$@"`
+eval set -- "$TEMP"
+
+
+#### passing arguments
+while :
+do
+    case "$1" in
+    	-1 | --r1-file)
+    			case "$2" in
+    					"") shift 2;;
+ 				      *) r1_file="$2"; shift 2;;
+      		esac ;;
+    	-2 | --r2-file)
+    			case "$2" in
+    					"") shift 2;;
+    					*) r2_file="$2"; shift 2;;
+    			esac;;
+	  	-g | --genome-file)
+	  			case "$2" in
+    					"") shift 2;;
+    					*) genome_file="$2"; shift 2;;
+    			esac;;
+	  	-e | --enzyme-info)
+	  			case "$2" in
+    					"") shift 2;;
+    					*) re1="$2"; shift 2;;
+    			esac;;
+      -q | --threads)
+  				case "$2" in
+  						"") shift 2;;
+  						*) mapping_threads="$2"; shift 2;;
+  				esac;;
+      -o | --outprefix)
+  				case "$2" in
+  						"") shift 2;;
+  						*) sampleprefix="$2"; shift 2;;
+  				esac;;
+  		-h | --help)
+	  			usage
+	  			exit 0
+	  			;;
+	  	--) # End of all options
+	  			shift
+	  			break
+	  			;;
+	  	-*)
+	  			echo "Error: Unknown option: $1" >&2
+	  			exit 1
+	  			;;
+	  	*)  # No more options
+      		exit 1
+	  			;;
+    esac
+done
+
+
+#### judge parameters
+if [ -z $r1_file ] || [ -z $r2_file ] || [ -z $genome_file ] || [ -z $re1 ]
+then
+	usage
+	exit 1
+fi
+
+
+#### receive all parameters from command line
+# get sample output prefix if not set
+if [ $sampleprefix="" ]
+then
+  sampleprefix=${r1_file/_R?.fq.gz}
+  sampleprefix=${sampleprefix/.fq.gz}
+  sampleprefix=${sampleprefix/.fastq.gz}
+fi
+# get genome dir and prefix
+genomepredix=`basename $genome_file`
+genomepredix=${genomepredix/.fa}
+genomepredix=${genomepredix/.fasta}
+genomedir=`dirname $genome_file`
+# get restriction enzyme information
+IFS=':|,' read -a myre1 <<< "$re1"
+re1tag1=${myre1[1]}
+re1tag2=${myre1[3]}
+if [ $re1tag2="" ]
+then
+  re1tag2=None
+fi
+reprefix=$genomedir/Digest_${genomepredix}_${re1tag1}_${re1tag2}
+re=$reprefix.clear
+
+
+#### digest genome by given enzyme
+if [ ! -e $re ]
+then
+  $bdir/extrasoft/hicup/hicup_digester --re1 $re1 --genome $genomepredix --outdir $genomedir $genome_file
+  awk '{print $1"\t"$2-1"\t"$3"\t"$4"\t"$5"\t"$6"\t"$7}' $reprefix.txt |awk 'NR>2' > $re
+else
+  echo "#*_*# <$re> already exists...Skip~~~"
+fi
+
+
+#### process data with hicup
+## prepare config file
+if [ ! -e $sampleprefix.hicup.config ]
+then
+  echo -e "Index: $genomedir/$genomepredix" > $sampleprefix.hicup.config
+  echo -e "Digest: $reprefix.txt" >> $sampleprefix.hicup.config
+  echo -e "$r1_file" >> $sampleprefix.hicup.config
+  echo -e "$r2_file" >> $sampleprefix.hicup.config
+else
+	echo "#*_*# <$sampleprefix.hicup.config> already exists...Skip~~~"
+fi
+
+## run hicup
+if [ ! -e $sampleprefix.hicup ]
+then
+  mkdir $sampleprefix.hicup
+  $bdir/extrasoft/hicup/hicup --bowtie2 ./ --config $sampleprefix.hicup.config --outdir $sampleprefix.hicup --threads $mapping_threads --zip
+else
+  echo "#*_*# <$sampleprefix.hicup> already exists...Skip~~~"
+fi
+
+
+#### format hicup output
+## bam to hicsum
+bam=$sampleprefix.hicup/uniques_${sampleprefix}_R1_trunc_${sampleprefix}_R2_trunc.pair.bam
+if [ ! -e $sampleprefix.hicsum ] && [ ! -e $sampleprefix.sorted.hicsum ]
+then
+  $bdir/bin/hicapp_preprocess_bam2hicsum.sh $bam $re $sampleprefix.hicsum
+else
+  echo "#*_*# <$sampleprefix.hicsum> or <$sampleprefix.sort.hicsum> already exists...Skip~~~"
+fi
+
+## format hicsum (swap and order reads based on genomic coordinates)
+if [ ! -e $sampleprefix.sorted.hicsum ]
+then
+  $bdir/bin/hicapp_preprocess_hicsum_swapRD.pl $sampleprefix.hicsum > $sampleprefix.swap.hicsum
+  $bdir/bin/hicapp_preprocess_hicsum_sort.sh $sampleprefix.swap.hicsum > $sampleprefix.sorted.hicsum
+  rm -rf $sampleprefix.swap.hicsum $sampleprefix.hicsum
+else
+  echo "#*_*# <$sampleprefix.sorted.hicsum> already exists...Skip~~~"
+fi

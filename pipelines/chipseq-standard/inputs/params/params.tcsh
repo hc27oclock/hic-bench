@@ -8,6 +8,7 @@ module unload r
 module unload python
 
 # load all tools
+module load gtools/3.0
 module load kentutils/329
 module load samtools/1.2.1
 module load bedtools/2.22.0

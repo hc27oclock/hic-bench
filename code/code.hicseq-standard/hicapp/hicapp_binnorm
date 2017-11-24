@@ -1,0 +1,177 @@
+#!/bin/bash
+##
+# hicsum file -> binning pair file and normalization
+##
+
+
+#### set path of the pipeline
+bdir=`dirname $0`
+
+
+#### useage
+red='\033[0;31m'
+blue='\033[1;34m'
+green='\033[1;32m'
+NC='\033[0m' # No Color
+options_help="
+${red}Command line${NC}: ${green}
+    hicapp_binnorm [options] [-s <hicsum_file>] [-r <binning_resolution>] [-t <binning_tag>] [-c <genome_file>]
+
+${red}Required${NC}: ${green}
+    -s | --hicsum:          hicsum file (recommanded: *.hicsum or *.sorted.hicsum)
+    -r | --bin-res:         binning resolution (e.g.: 1000000)
+    -t | --bin-tag:         binning tag used in output file name (e.g.: 1m)
+    -c | --chrom:           .genome file with chromosome length (e.g.: hg19.genome)
+${NC}
+
+${red}Options${NC}: ${green}
+    -p | --threads:         Number of threads used for IC normalization (default: 1)
+                            multiple threads only valid for ic_mep method
+    -s | --outprefix:       Output file prefix (default: IC)
+    -i | --IC-cmd:          IC command in HiCorrector (default: ic) (or ic_mep)
+    -n | --N-iter:          Number of iterations used in IC step (default: 30)
+    -b | --N-bin:           Number of binning steps selected to apply caICB,
+                            (Parameter K in the caICB algorithm) (default: 200)
+    -h | --help:            help
+${NC}
+"
+usage () {
+	echo -e "\n${red}Usage${NC}: ${green}`basename $0` -h for help${NC}"
+	echo -e "$options_help"
+	exit 1
+}
+
+
+#### set defalt arguments
+norm_threads=1
+sname=""
+iccmd=ic
+niter=30
+nbin=200
+
+
+# read the options
+TEMP=`getopt -o s:r:t:c:p:s:i:n:b:h --long hicsum:,bin-res:,bin-tag:,chrom:,threads:,outprefix:,IC-cmd:,N-iter:,N-bin:,help -n 'hicapp_binnorm' -- "$@"`
+eval set -- "$TEMP"
+
+
+#### passing arguments
+while :
+do
+    case "$1" in
+    	-s | --hicsum)
+    			case "$2" in
+    					"") shift 2;;
+ 				      *) hicsum="$2"; shift 2;;
+      		esac ;;
+    	-r | --bin-res)
+    			case "$2" in
+    					"") shift 2;;
+    					*) res="$2"; shift 2;;
+    			esac;;
+	  	-t | --bin-tag)
+	  			case "$2" in
+    					"") shift 2;;
+    					*) tag="$2"; shift 2;;
+    			esac;;
+	  	-c | --chrom)
+	  			case "$2" in
+    					"") shift 2;;
+    					*) chrom="$2"; shift 2;;
+    			esac;;
+      -q | --threads)
+  				case "$2" in
+  						"") shift 2;;
+  						*) norm_threads="$2"; shift 2;;
+  				esac;;
+      -s | --outprefix)
+  				case "$2" in
+  						"") shift 2;;
+  						*) sname="$2"; shift 2;;
+  				esac;;
+      -i | --IC-cmd)
+  				case "$2" in
+  						"") shift 2;;
+  						*) iccmd="$2"; shift 2;;
+  				esac;;
+      -n | --N-iter)
+  				case "$2" in
+  						"") shift 2;;
+  						*) niter="$2"; shift 2;;
+  				esac;;
+      -b | --N-bin)
+  				case "$2" in
+  						"") shift 2;;
+  						*) nbin="$2"; shift 2;;
+  				esac;;
+  		-h | --help)
+	  			usage
+	  			exit 0
+	  			;;
+	  	--) # End of all options
+	  			shift
+	  			break
+	  			;;
+	  	-*)
+	  			echo "Error: Unknown option: $1" >&2
+	  			exit 1
+	  			;;
+	  	*)  # No more options
+      		exit 1
+	  			;;
+    esac
+done
+
+
+#### judge parameters
+if [ -z $hicsum ] || [ -z $res ] || [ -z $tag ] || [ -z $chrom ]
+then
+	usage
+	exit 1
+fi
+
+
+#### set par
+if [ $sname="" ]
+then
+  sname=${hicsum/.sorted.hicsum/}
+  sname=${sname/.hicsum/}
+fi
+
+
+#### generate pair table and ICE normalize
+## generate raw contact pair file
+if [ ! -e $sname.$tag.pair ]
+then
+	$bdir/bin/hicapp_binnorm_hicsum2binpair.sh $hicsum $res > $sname.$tag.pair
+else
+	echo "#*_*# <$sname.$tag.pair> already exists...Skip~~~"
+fi
+
+## generate raw contact matrix by chromosome
+if [ ! -d $sname.$tag.bychrom.matrix ]
+then
+	$bdir/bin/hicapp_binnorm_binpair2matrix_bychrom.pl $sname.$tag.pair $chrom $res
+else
+	echo "#*_*# <$sname.$tag.bychrom.matrix> already exists...Skip~~~"
+fi
+
+## IC normalization by chromosome
+if [ ! -e $sname.$tag.bychrom.icb ]
+then
+	$bdir/bin/hicapp_binnorm_ic_bychrom.sh $sname.$tag.bychrom.matrix $iccmd $norm_threads $niter $sname.$tag.bychrom.icb
+else
+	echo "#*_*# <$sname.$tag.bychrom.icb> already exists...Skip~~~"
+fi
+
+## caICB correction
+if [ ! -e $sname.$tag.bychrom.caicb ]
+then
+	$bdir/bin/hicapp_binnorm_caicb.sh $sname.$tag.pair $sname.$tag.bychrom.icb $nbin $res
+else
+	echo "#*_*# <$sname.$tag.bychrom.caicb> already exists...Skip~~~"
+fi
+
+
+
+

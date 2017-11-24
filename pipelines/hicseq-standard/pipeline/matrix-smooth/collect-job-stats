@@ -1,0 +1,33 @@
+#!/bin/tcsh
+
+##
+## USAGE: collect-job-stats OUT-DIR
+##
+
+if ($#argv != 1) then
+  grep '^##' $0
+  exit
+endif
+
+set outdir = $1
+set bin_kb = 20
+set D = results/matrix-estimated.by_sample.prep_log2.fused2d/matrix-ic.by_sample.standard/matrix-filtered.by_sample.res_${bin_kb}kb/filter-resample.by_sample.reads_70M/filter.by_sample.standard/align.by_sample.bowtie2
+
+rm -rf $outdir
+mkdir -p $outdir
+
+cat inputs/genomes/hg19/genome.bed | gtools-regions n | awk -v b=$bin_kb '{print $1"\t"$2/b}' | vectors format -n 0 >! $outdir/matrix-sizes.tsv
+
+echo -n '' >! $outdir/stats.tsv
+foreach d ($D/*/__jdata)
+  set sample = `echo $d | sed 's/.__jdata$//' | sed 's/.*\///'`
+  set p = `pwd`
+  cd $d
+  foreach jfile (*.jid)
+    set jchr = `echo $jfile | cut -d'.' -f3`
+    set jid = `cat $jfile | cut -d' ' -f3`
+    qacct -o at570 -j $jid | grep -E '^cpu |^maxvmem |^start_time |^end_time ' | sed "s/^/$jchr	/" | sed "s/^/$sample	/" >> $p/$outdir/stats.tsv
+  end
+  cd $p
+end
+

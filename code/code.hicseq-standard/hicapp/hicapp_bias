@@ -1,0 +1,219 @@
+#!/bin/bash
+####
+# HiC bias evaluation
+####
+
+#### set path of the pipeline
+bdir=`dirname $0`
+
+
+#### useage
+red='\033[0;31m'
+blue='\033[1;34m'
+green='\033[1;32m'
+NC='\033[0m' # No Color
+options_help="
+${red}Command line${NC}: ${green}
+    hicapp_bias [options] [-g <genome_fasta_file>] [-e <restriction_enzyme_info>]
+                          [-c <genome_file>] [-r <binning_resolution>] [-t <binning_tag>]
+
+${red}Required${NC}: ${green}
+    -g | --genome-file:     genome fasta file (recommanded: hg19.fa, and
+                            chromosome name is better to be like chr1, chr2..., and
+                            bowtie2 index file has to be in the same folder: hg19.1.bt2...)
+    -e | --enzyme-info:     restriction enzyme information (e.g.: ^GATC,MboI or A^AGCTT,HindIII
+                            or A^GATCT,BglII:A^AGCTT,HindIII for two enzymes)
+    -c | --chrom:           .genome file with chromosome length (e.g.: hg19.genome)
+    -r | --bin-res:         binning resolution (e.g.: 1000000)
+    -t | --bin-tag:         binning tag used in output file name (e.g.: 1m)
+
+${NC}
+${red}Options${NC}: ${green}
+    -m | --mapb:            UCSC mappability score in bw format (e.g.: mappability100mer.bw)
+                            Download from: http://hgdownload.cse.ucsc.edu/goldenPath/hg18/encodeDCC/wgEncodeMapability/wgEncodeCrgMapabilityAlign100mer.bw.gz
+    -s | --sampleprefix:    Output file prefix (default: IC)
+    -f | --gcflank:         Flanking region of RE cutting sites to calculate GC content (default: 200)
+    -b | --mapbflank:       Flanking region of RE cutting sites to calculate mappability (default: 500)
+    -z | --seg:             Copy number segmentation file (e.g.: *.seg)
+    -h | --help:            help
+${NC}
+"
+usage () {
+	echo -e "\n${red}Usage${NC}: ${green}`basename $0` -h for help${NC}"
+	echo -e "$options_help"
+	exit 1
+}
+
+
+#### set defalt arguments
+sampleprefix=""
+gcflank=200
+mapbflank=500
+res=1000000
+tag=1m
+seg=""
+
+
+# read the options
+TEMP=`getopt -o g:e:c:m:r:t:s:f:b:z:h --long genome-file:,enzyme-info:,chrom:,mapb:,bin-res:,bin-tag:,sampleprefix:,gcflank:,mapbflank:,seg:,help -n 'hicapp_bias' -- "$@"`
+eval set -- "$TEMP"
+
+
+#### passing arguments
+while :
+do
+    case "$1" in
+	  	-g | --genome-file)
+	  			case "$2" in
+    					"") shift 2;;
+    					*) genome_file="$2"; shift 2;;
+    			esac;;
+	  	-e | --enzyme-info)
+	  			case "$2" in
+    					"") shift 2;;
+    					*) re1="$2"; shift 2;;
+    			esac;;
+	  	-c | --chrom)
+	  			case "$2" in
+    					"") shift 2;;
+    					*) chrom="$2"; shift 2;;
+    			esac;;
+      -m | --mapb)
+  				case "$2" in
+  						"") shift 2;;
+  						*) mapb="$2"; shift 2;;
+  				esac;;
+    	-r | --bin-res)
+    			case "$2" in
+    					"") shift 2;;
+    					*) res="$2"; shift 2;;
+    			esac;;
+	  	-t | --bin-tag)
+	  			case "$2" in
+    					"") shift 2;;
+    					*) tag="$2"; shift 2;;
+    			esac;;
+      -s | --outprefix)
+  				case "$2" in
+  						"") shift 2;;
+  						*) sampleprefix="$2"; shift 2;;
+  				esac;;
+      -f | --gcflank)
+  				case "$2" in
+  						"") shift 2;;
+  						*) gcflank="$2"; shift 2;;
+  				esac;;
+      -b | --mapbflank)
+  				case "$2" in
+  						"") shift 2;;
+  						*) mapbflank="$2"; shift 2;;
+  				esac;;
+      -z | --seg)
+  				case "$2" in
+  						"") shift 2;;
+  						*) seg="$2"; shift 2;;
+  				esac;;
+  		-h | --help)
+	  			usage
+	  			exit 0
+	  			;;
+	  	--) # End of all options
+	  			shift
+	  			break
+	  			;;
+	  	-*)
+	  			echo "Error: Unknown option: $1" >&2
+	  			exit 1
+	  			;;
+	  	*)  # No more options
+      		exit 1
+	  			;;
+    esac
+done
+
+
+#### judge parameters
+if [ -z $genome_file ] || [ -z $re1 ] || [ -z $chrom ]
+then
+	usage
+	exit 1
+fi
+
+
+#### receive all parameters from command line
+# get sample output prefix if not set
+if [ $sampleprefix="" ]
+then
+  sampleprefix=${seg/.seg}
+fi
+# get genome dir and prefix
+genomepredix=`basename $genome_file`
+genomepredix=${genomepredix/.fa}
+genomepredix=${genomepredix/.fasta}
+genomedir=`dirname $genome_file`
+# get restriction enzyme information
+IFS=':|,' read -a myre1 <<< "$re1"
+re1tag1=${myre1[1]}
+re1tag2=${myre1[3]}
+if [ $re1tag2="" ]
+then
+  re1tag2=None
+fi
+reprefix=$genomedir/Digest_${genomepredix}_${re1tag1}_${re1tag2}
+re=$reprefix.clear
+
+
+#### digest genome by given enzyme
+if [ ! -e $re ]
+then
+  $bdir/extrasoft/hicup/hicup_digester --re1 $re1 --genome $genomepredix --outdir $genomedir $genome_file
+  awk '{print $1"\t"$2-1"\t"$3"\t"$4"\t"$5"\t"$6"\t"$7}' $reprefix.txt |awk 'NR>2' > $re
+else
+  echo "#*_*# <$re> already exists...Skip~~~"
+fi
+
+
+#### calculate fragment length
+if [ ! -e $re.$tag.fl ]
+then
+	$bdir/bin/hicapp_bias_calc_fraglen.sh $re $chrom $res $tag
+else
+	echo "#*_*# <$re.$tag.fl> already exists...Skip~~~"
+fi
+
+
+#### calculate GC content
+if [ ! -e $re.$tag.gc ]
+then
+	$bdir/bin/hicapp_bias_calc_gc.sh $re $chrom $genome_file $res $tag $gcflank
+else
+	echo "#*_*# <$re.$tag.gc> already exists...Skip~~~"
+fi
+
+
+#### calculate mappability
+if [ ! -e $re.$tag.mapb ] && [ -e $mapb ]
+then
+	$bdir/bin/hicapp_bias_calc_mapb.sh $re $chrom $res $tag $mapb $mapbflank
+else
+	echo "#*_*# <$re.$tag.mapb> already exists...Skip~~~"
+fi
+
+
+#### copy number calculation
+## make window
+if [ ! -e $chrom.$tag ]
+then
+	bedtools makewindows -g $chrom -w $res |awk '{print $1"\t"$2"\t"$3"\t"$1"_"$2"\t"$1"_"$2}' > $chrom.$tag
+  bedtools sort -i $chrom.$tag > $chrom.$tag.sortBed
+else
+	echo "#*_*# <$chrom.$tag> already exists...Skip~~~"
+fi
+## windown copy number calculation
+if [ ! -e ${sampleprefix}.$tag.cn ] && [ -e $seg ]
+then
+	Rscript $bdir/bin/hicapp_bias_calc_cn.R $seg $chrom.$tag ${sampleprefix}.$tag.cn
+else
+	echo "#*_*# <${sampleprefix}.$tag.cn> already exists...Skip~~~"
+fi
+

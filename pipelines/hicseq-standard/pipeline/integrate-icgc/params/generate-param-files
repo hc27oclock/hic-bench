@@ -1,0 +1,18 @@
+#!/bin/tcsh
+
+##
+## USAGE: generate-param-files OVERLAP-VALUE
+##
+
+if ($#argv != 1) then
+  grep '^##' $0
+  exit
+endif
+
+set overlap = $1
+
+foreach size (250 500 1000 2000 5000 10000)
+  cat template.tcsh | sed "s/<size>/${size}000/g" | sed "s/<overlap>/${overlap}/" >! params.size_${size}kb.tcsh
+  chmod +x params.size_${size}kb.tcsh
+end
+
