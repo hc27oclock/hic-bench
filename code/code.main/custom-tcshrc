@@ -5,3 +5,6 @@ set path = `echo $path | tr ' ' '\n' | grep -v '/ifs/home/'`
 set path = ( ./code/code.main $path )
 
 umask 007
+
+module load gtools/3.0
+
