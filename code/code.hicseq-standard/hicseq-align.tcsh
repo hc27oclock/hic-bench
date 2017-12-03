@@ -46,7 +46,7 @@ if ($aligner == 'gtools') then                    ## Aligner = gtools
     scripts-send2err "Error: gtools-hic align does not allow multiple read pair files."
     exit
   endif
-  gtools-hic align -v --work-dir $out/tmp -p $threads $align_params --reorder --bowtie-index $genome_index $fastq1 $fastq2 | samtools view -T $genome_index.fa -b1 - >! $out/alignments.bam
+  gtools-hic align -v --work-dir $out/tmp -p $threads $align_params --bowtie-index $genome_index $fastq1 $fastq2 | samtools view -T $genome_index.fa -b1 - >! $out/alignments.bam
   rm -rf $out/tmp
 
 

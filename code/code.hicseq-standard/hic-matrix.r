@@ -1963,7 +1963,7 @@ LoadEstimation = function(filename, options, replace.na)
     est$ignored_rows = integer(0)
     est$ignored_cols = integer(0)
     fignored = options$"ignored-loci"
-    if (fignored!="") {
+    if ((fignored!="")&&(file.info(fignored)$size>0)) {
       est$ignored_rows = sort(which(!is.na(match(rownames(est$x),as.vector(t(read.table(fignored,check.names=F)))))))
       est$ignored_cols = sort(which(!is.na(match(colnames(est$x),as.vector(t(read.table(fignored,check.names=F)))))))
       if (options$verbose) { write(paste('Number of rows set to zero in input matrix (ignored loci) = ',length(est$ignored_rows),sep=''),stderr()); }
