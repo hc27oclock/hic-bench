@@ -19,7 +19,7 @@ set fraglen = $2
 # create sample sheet
 set inpdir = fastq
 set sheet = sample-sheet.tsv
-echo "sample control group fastq-r1 fastq-r2 genome fragmentation-size chip" | tr ' ' '\t' >! $sheet
+echo "sample control group fastq-r1 fastq-r2 genome fragmentation-size chip cell_type" | tr ' ' '\t' >! $sheet
 
 # determine sample names
 set samples = `cd $inpdir; ls -1d */*.fastq.gz */*.bam | sed 's/.[^/]\+$//' | sort -u` 
@@ -28,6 +28,7 @@ set samples = `cd $inpdir; ls -1d */*.fastq.gz */*.bam | sed 's/.[^/]\+$//' | so
 foreach sample ($samples)
   scripts-send2err "Importing sample $sample..."
   set control = NA                                    # this should be filled in manually
+  set cell_type = `echo $sample | cut -d'-' -f1`
   set group = `echo $sample | cut -d'-' -f-3`
   set chip = `echo $sample | cut -d'-' -f3`
   set fastq = `cd $inpdir; ls -1 $sample/*.fastq.gz`
@@ -45,7 +46,7 @@ foreach sample ($samples)
   if ("$fastq2" == "") set fastq2 = NA
   set frag = $fraglen # 200 for histone marks (NMAS), 400 for transcription factors (sonication), 200 for atac-seq
   endif
-  echo "$sample\t$control\t$group\t`echo $fastq1 | tr ' ' ','`\t`echo $fastq2 | tr ' ' ','`\t$genome\t$frag\t$chip" >> $sheet
+  echo "$sample\t$control\t$group\t`echo $fastq1 | tr ' ' ','`\t`echo $fastq2 | tr ' ' ','`\t$genome\t$frag\t$chip\t$cell_type" >> $sheet
 end
 
 echo

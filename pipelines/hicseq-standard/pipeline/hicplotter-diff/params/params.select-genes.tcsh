@@ -17,7 +17,7 @@ set chrom_excluded = 'chr[MY]'
 # Get the boundary scores and the domains
 set branch_short = `echo $branch | sed 's/.*results\///' | sed 's/^matrix-distnorm.[^/]\+\///'`
 set group_var = `echo $branch_short | cut -d'/' -f1 | cut -d'.' -f2`
-set bscores_branch = ../boundary-scores/results/boundary-scores.$group_var.prep_none/$branch_short
+set bscores_branch = ../boundary-scores/results/boundary-scores.$group_var.activity_500kb/$branch_short
 set domains_branch = ../domains/results/domains.$group_var.hicratio.d_0500/$branch_short
 set bdiff_branch = ../boundary-diff/results/boundary-diff.$group_var.standard/$branch_short
 

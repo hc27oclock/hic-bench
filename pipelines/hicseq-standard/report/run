@@ -15,6 +15,7 @@ mkdir $report
 
 set mapq = 30
 set main_branch = filter.by_sample.mapq_$mapq/align.by_sample.bowtie2
+set domains_method = domains.by_sample.hicratio.d_0500
 
 cp ../pipeline/filter-stats/results/filter-stats.standard/$main_branch/all-samples/counts.pdf $report/read-counts-classification.pdf
 cp ../pipeline/filter-stats/results/filter-stats.standard/$main_branch/all-samples/percent.pdf $report/read-percentages-classification.pdf
@@ -25,7 +26,7 @@ set bscore_method = activity_500kb
 cp ../pipeline/boundary-scores-pca/results/boundary-scores-pca.standard/boundary-scores.by_sample.$bscore_method/matrix-filtered.by_sample.res_40kb/$main_branch/all-samples/pca.intra-left.k=001.pdf $report/pca-by-activity.pdf
 cp ../pipeline/boundary-scores-pca/results/boundary-scores-pca.standard/boundary-scores.by_sample.$bscore_method/matrix-filtered.by_sample.res_40kb/$main_branch/all-samples/pca.ratio.k=001.pdf $report/pca-by-insulation-score.pdf
 
-cp ../pipeline/domains-stats/results/domains-stats.standard/domains.by_sample.crane.ins_0500K/matrix-filtered.by_sample.res_40kb/$main_branch/all-samples/domains-stats.k=001.pdf $report/domains-stats.pdf
+cp ../pipeline/domains-stats/results/domains-stats.standard/$domains_method/matrix-filtered.by_sample.res_40kb/$main_branch/all-samples/domains-stats.k=001.pdf $report/domains-stats.pdf
 
 # run latex here
 set title = `cd ..; pwd | sed 's/.*\///'`

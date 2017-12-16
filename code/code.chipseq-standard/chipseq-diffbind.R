@@ -4,19 +4,19 @@
 # output width
 options(width = 120)
 
-# load libraries
-library(DiffBind, quietly = TRUE)
-library(RColorBrewer, quietly = TRUE)
-library(biomaRt, quietly = TRUE)
-library(ChIPpeakAnno, quietly = TRUE)
-
 # process command-line arguments (only arguments after --args)
 args = commandArgs(trailingOnly = TRUE)
 outDir = args[1]
 sampleSheetCsv = args[2]
 genome = args[3]
-blockFactor = args[4]
+genomeDir = args[4]
+blockFactor = args[5]
 
+# load libraries
+library(DiffBind, quietly = TRUE)
+library(RColorBrewer, quietly = TRUE)
+library(biomaRt, quietly = TRUE)
+library(ChIPpeakAnno, quietly = TRUE)
 
 # extract differentially bound peaks and annotate them
 generateDiffBindReport = function(dba, contrast, th = 0.05, method = DBA_DESEQ2, reps = FALSE, tss, mart.df, out.dir = ".") {
@@ -161,14 +161,16 @@ print(contrasts)
 message(" ========== retrieve biomart annotations ========== ")
 
 # retrieve annotations
-if (genome == "hg19") {
-  martEns = useMart(host="grch37.ensembl.org", biomart="ENSEMBL_MART_ENSEMBL", dataset="hsapiens_gene_ensembl", verbose=F)
-}
-if (genome == "mm10") {
-  martEns = useMart(host="useast.ensembl.org", biomart="ENSEMBL_MART_ENSEMBL", dataset="mmusculus_gene_ensembl", verbose=F)
-}
-martEnsDF = getBM(attributes=c("ensembl_gene_id", "external_gene_name", "gene_biotype"), mart=martEns)
-martEnsTSS = getAnnotation(mart=martEns, featureType="TSS")
+#if (genome == "hg19") {
+#  martEns = useMart(host="grch37.ensembl.org", biomart="ENSEMBL_MART_ENSEMBL", dataset="hsapiens_gene_ensembl", verbose=F)
+#}
+#if (genome == "mm10") {
+#  martEns = useMart(host="sep2017.archive.ensembl.org", biomart="ENSEMBL_MART_ENSEMBL", dataset="mmusculus_gene_ensembl", verbose=F)
+#}
+# martEnsDF = getBM(attributes=c("ensembl_gene_id", "external_gene_name", "gene_biotype"), mart=martEns)
+# martEnsTSS = getAnnotation(mart=martEns, featureType="TSS")
+martEnsDF = readRDS(paste(genomeDir,"martEnsDF.rds",sep='/'))
+martEnsTSS = readRDS(paste(genomeDir,"martEnsTSS.rds",sep='/'))
 
 message(" ========== generate reports ========== ")
 
