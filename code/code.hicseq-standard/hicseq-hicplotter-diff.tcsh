@@ -80,7 +80,7 @@ foreach region ($regions)
   set stop = `echo $region | cut -d'-' -f2`
   set start_bin = `echo $start/$bin_size | bc`
   set stop_bin = `echo $stop/$bin_size | bc`
-  set hic_matrices = `cd $workdir; ls -1 *.matrix.txt | grep -w $chrom | tr '\n' ' '`
+  set hic_matrices = ($object2.k=001.$chrom.matrix.txt $object1.k=001.$chrom.matrix.txt)
   set hic_matrix_no = `echo $hic_matrices | tr ' ' '\n' | wc -l`
 
   echo $chrom
