@@ -36,8 +36,21 @@ set code_dir = code/hicseq-submatrix-diff-scripts
 
 # perform Hi-C submatrix differential analysis
 Rscript $code_dir/find-hic-squares.r -v -o $outdir --bin-size $bin_size $submatrix_diff_params $branch/$object1 $branch/$object2
-cat $outdir/out.tsv | scripts-skipn 1 | tr '\t' ' ' | sed 's/ /|/' | sed 's/ /|/' | sed 's/ /|/' | sed 's/ /|/' | sed 's/ /\t/' | gtools-overlaps bin -v -i --print-labels --print-regions coding-tss-bins.bed | tr '|' '\t' >! $outdir/out1.tsv
 
+# generated annotated bed file
+set t = $outdir/tmp
+mkdir -p $t
+cat $genome_dir/gene-name.bed | gtools-regions reg | gtools-regions pos -op 5p | sed 's/^/tss:/' >! $t/annot.bed
+#cat $genome_dir/gene-name.bed | gtools-regions reg | sed 's/^/gbody:/' >> $t/annot.bed
+set columns = `head -1 $outdir/out.tsv | tr '\t' '\n' | grep -n '^locus[12]$' | cut -d':' -f1`
+cat $outdir/out.tsv | scripts-skipn 1 | cut -f`echo $columns | tr ' ' ','` | tr '\t' '\n' | sort -u | sed 's/^/_\t/' | gtools-overlaps overlap -i -label $t/annot.bed | cut -d':' -f2- | tools-cols -t 1 0 | tr ' ' '_' | sort | tools-mergeuniq -merge -t ',' >! $t/bins.tsv
+cat $outdir/out.tsv | scripts-skipn 1 | cut -f`echo $columns | tr ' ' ','` | tr '\t' '\n' | tr ' ' '_' | sort -u | join -t'	' -a1 -e 'N/A' -o 1.1 2.2 - $t/bins.tsv | sed 's/_/ /' | sed 's/_/ /' | sed 's/_/ /' | tools-cols -t 1 0 | gtools-regions bed | cut -f-4 | sort -k1,1 -k2,2n >! $t/bins-annotated.bed
+
+# generate annotated table
+cat $outdir/out.tsv | scripts-skipn 1 | tr '\t' ' ' | sed 's/ /|/' | sed 's/ /|/' | sed 's/ /|/' | sed 's/ /|/' | sed 's/ /\t/' | gtools-overlaps bin -v -i --print-labels --print-regions $t/bins-annotated.bed | tr '|' '\t' | sort -k2,2g >! $outdir/results.tsv
+
+# cleanup
+rm -rf $t
 
 # -------------------------------------
 # -----  MAIN CODE ABOVE --------------
