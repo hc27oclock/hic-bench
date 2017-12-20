@@ -9,5 +9,6 @@ module unload zlib
 
 set diffbind_factor = 'group'
 set diffbind_blocking_factor = ''
+set norm_method = 'DESEQ2'
 
 

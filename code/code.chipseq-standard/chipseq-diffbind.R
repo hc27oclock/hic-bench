@@ -8,15 +8,31 @@ options(width = 120)
 args = commandArgs(trailingOnly = TRUE)
 outDir = args[1]
 sampleSheetCsv = args[2]
-genome = args[3]
-genomeDir = args[4]
-blockFactor = args[5]
+normMethod = args[3]          # e.g. DESEQ2
+genome = args[4]
+genomeDir = args[5]
+blockFactor = args[6]
 
 # load libraries
 library(DiffBind, quietly = TRUE)
 library(RColorBrewer, quietly = TRUE)
 library(biomaRt, quietly = TRUE)
 library(ChIPpeakAnno, quietly = TRUE)
+
+# setup normalization 
+if (normMethod=='DESEQ2') {
+  print(normMethod)
+  normMethodObj = DBA_DESEQ2
+  normMethodBlock = DBA_DESEQ2_BLOCK
+} else if (normMethod=='EDGER') {
+  print(normMethod)
+  normMethodObj = DBA_EDGER
+  normMethodBlock = DBA_EDGER_BLOCK
+} else {
+  write("Error: unknown normalization method!", stderr())
+  quit(save='no')
+}
+
 
 # extract differentially bound peaks and annotate them
 generateDiffBindReport = function(dba, contrast, th = 0.05, method = DBA_DESEQ2, reps = FALSE, tss, mart.df, out.dir = ".") {
@@ -107,8 +123,8 @@ message(" ========== load data ========== ")
 sampleSheet = read.csv(sampleSheetCsv)
 print(sampleSheet)
 # multi-threading possible, but fails at dba.analyze() with larger datasets (>100,000 peaks)
-# db_config = data.frame(AnalysisMethod = DBA_DESEQ2, th = 0.05, cores = 4)
-db_config = data.frame(AnalysisMethod = DBA_DESEQ2, th = 0.05, RunParallel = FALSE)
+# db_config = data.frame(AnalysisMethod = normMethodObj, th = 0.05, cores = 4)
+db_config = data.frame(AnalysisMethod = normMethodObj, th = 0.05, RunParallel = FALSE)
 db = dba(sampleSheet = sampleSheet, bCorPlot = FALSE, config = db_config)
 print(db)
 
@@ -178,9 +194,9 @@ message(" ========== generate reports ========== ")
 for (i in 1:length(row.names(contrasts))) {
   print(contrasts[i,])
   # using try to prevent "execution halted" that kills script if there are no significant results
-  try(generateDiffBindReport(dba=db, contrast=i, th=1.00, method=DBA_DESEQ2, tss=martEnsTSS, mart.df=martEnsDF, reps=T, out.dir=outDir))
-  try(generateDiffBindReport(dba=db, contrast=i, th=0.20, method=DBA_DESEQ2, tss=martEnsTSS, mart.df=martEnsDF, reps=T, out.dir=outDir))
-  try(generateDiffBindReport(dba=db, contrast=i, th=0.05, method=DBA_DESEQ2, tss=martEnsTSS, mart.df=martEnsDF, reps=T, out.dir=outDir))
+  try(generateDiffBindReport(dba=db, contrast=i, th=1.00, method=normMethodObj, tss=martEnsTSS, mart.df=martEnsDF, reps=T, out.dir=outDir))
+  try(generateDiffBindReport(dba=db, contrast=i, th=0.20, method=normMethodObj, tss=martEnsTSS, mart.df=martEnsDF, reps=T, out.dir=outDir))
+  try(generateDiffBindReport(dba=db, contrast=i, th=0.05, method=normMethodObj, tss=martEnsTSS, mart.df=martEnsDF, reps=T, out.dir=outDir))
 }
 
 # repeat with blocking factor if blocking factor parameter was passed
@@ -204,9 +220,9 @@ if (!is.na(blockFactor)) {
   for (i in 1:length(row.names(contrasts))) {
     print(contrasts[i,])
     # using try to prevent "execution halted" that kills script if there are no significant results
-    try(generateDiffBindReport(dba=db, contrast=i, th=1.00, method=DBA_DESEQ2_BLOCK, tss=martEnsTSS, mart.df=martEnsDF, reps=T, out.dir=outDir))
-    try(generateDiffBindReport(dba=db, contrast=i, th=0.20, method=DBA_DESEQ2_BLOCK, tss=martEnsTSS, mart.df=martEnsDF, reps=T, out.dir=outDir))
-    try(generateDiffBindReport(dba=db, contrast=i, th=0.05, method=DBA_DESEQ2_BLOCK, tss=martEnsTSS, mart.df=martEnsDF, reps=T, out.dir=outDir))
+    try(generateDiffBindReport(dba=db, contrast=i, th=1.00, method=normMethodBlock, tss=martEnsTSS, mart.df=martEnsDF, reps=T, out.dir=outDir))
+    try(generateDiffBindReport(dba=db, contrast=i, th=0.20, method=normMethodBlock, tss=martEnsTSS, mart.df=martEnsDF, reps=T, out.dir=outDir))
+    try(generateDiffBindReport(dba=db, contrast=i, th=0.05, method=normMethodBlock, tss=martEnsTSS, mart.df=martEnsDF, reps=T, out.dir=outDir))
   }
 }
 

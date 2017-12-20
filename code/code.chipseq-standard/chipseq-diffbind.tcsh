@@ -60,7 +60,7 @@ foreach obj ($objects)
 end
 
 # run diffbind
-Rscript --vanilla ./code/chipseq-diffbind.R $outdir $diffbind_sample_sheet $genome $genome_dir $diffbind_blocking_factor 
+Rscript --vanilla ./code/chipseq-diffbind.R $outdir $diffbind_sample_sheet $norm_method $genome $genome_dir $diffbind_blocking_factor 
 
 
 # -------------------------------------
