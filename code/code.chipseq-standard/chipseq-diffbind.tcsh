@@ -60,8 +60,17 @@ foreach obj ($objects)
 end
 
 # run diffbind
+scripts-send2err "Running DiffBind..."
 Rscript --vanilla ./code/chipseq-diffbind.R $outdir $diffbind_sample_sheet $norm_method $genome $genome_dir $diffbind_blocking_factor 
 
+# integrate with additional tables
+if ($external_table != '') then
+  scripts-send2err "Integrating with external data..."
+  foreach diffbind_table ($outdir/diff_bind.*.q100.csv)
+    set out_table = `echo $diffbind_table | sed 's/\.csv$//'`.integrated.csv
+    Rscript ./code/diffbind-integrate.r -v -o $out_table $diffbind_table $external_table
+  end
+endif
 
 # -------------------------------------
 # -----  MAIN CODE ABOVE --------------
