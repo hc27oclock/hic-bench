@@ -58,8 +58,12 @@ for (mat in matrices) {
   fy = paste(ydir,mat,sep='/')
 
   # read matrices
-  x = as.matrix(read.table(fx,header=T))
-  y = as.matrix(read.table(fy,header=T))
+  x = 1.0*as.matrix(read.table(fx,header=T))
+  y = 1.0*as.matrix(read.table(fy,header=T))
+
+  # fix NA values
+  x[is.na(x)] = 0
+  y[is.na(y)] = 0
 
   # normalize by sequencing depth
   y = y*sum(x)/sum(y)
