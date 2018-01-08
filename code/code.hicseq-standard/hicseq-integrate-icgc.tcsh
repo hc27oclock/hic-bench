@@ -46,10 +46,10 @@ set log = log
 echo -n '' >! $log
 
 # gene classes
-cat release/gene-name.bed | gtools-regions reg | sort | joint - release/gene-name.description | grep protein_coding: | cut -f-2 | gtools-regions bed | cut -f-6 | scripts-sortbed -i >! protein_coding.bed
-cat release/gene-name.bed | gtools-regions reg | sort | joint - release/gene-name.description | grep -E '	protein_coding:|	lincRNA:|	miRNA:|	rRNA:' | cut -d':' -f1 | tools-cols -t 2 0 1 | sed 's/\t/:/' | gtools-regions bed | cut -f-6 | scripts-sortbed -i >! gene-name-biotype.bed
-#cat release/gene-name.bed | gtools-regions reg | sort | joint - release/gene-name.description | cut -d':' -f1 | cols -t 2 0 1 | sed 's/\t/:/' | gtools-regions bed | cut -f-6 | scripts-sortbed -i >! gene-name-biotype.bed
-cat release/gene-name.bed | gtools-regions reg | sort | joint - gene-class.tsv | tools-cols -t 2 0 1 | sed 's/\t/:/' | gtools-regions bed | cut -f-6 | scripts-sortbed -i >! gene-name-class.bed
+cat release/gene-name.bed | gtools-regions reg | sort | join -t'	' - release/gene-name.description | grep protein_coding: | cut -f-2 | gtools-regions bed | cut -f-6 | scripts-sortbed -i >! protein_coding.bed
+cat release/gene-name.bed | gtools-regions reg | sort | join -t'	' - release/gene-name.description | grep -E '	protein_coding:|	lincRNA:|	miRNA:|	rRNA:' | cut -d':' -f1 | tools-cols -t 2 0 1 | sed 's/\t/:/' | gtools-regions bed | cut -f-6 | scripts-sortbed -i >! gene-name-biotype.bed
+#cat release/gene-name.bed | gtools-regions reg | sort | join -t'	' - release/gene-name.description | cut -d':' -f1 | cols -t 2 0 1 | sed 's/\t/:/' | gtools-regions bed | cut -f-6 | scripts-sortbed -i >! gene-name-biotype.bed
+cat release/gene-name.bed | gtools-regions reg | sort | join -t'	' - gene-class.tsv | tools-cols -t 2 0 1 | sed 's/\t/:/' | gtools-regions bed | cut -f-6 | scripts-sortbed -i >! gene-name-class.bed
  
 foreach t (duplications deletions)
   cat ICGC_${t}.bed | awk -v max=$max_size '$3-$2<=max' | tools-rows -number | awk '{print $2"\t"$3"\t"$4"\t"$1"-"$5}' >! ICGC_${t}_uniqid.bed

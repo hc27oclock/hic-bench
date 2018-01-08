@@ -31,7 +31,7 @@ cat $t.x1 | cut -f-2 | join -t '	' -a1 -e 'N/A' -o 1.1 1.2 2.2 - $t.x2 | sort -k
 
 # generate final annotated table
 echo `head -1 $inp` locus1-annotations locus2-annotations | tr ' ' '\t'
-cat $t.x1 | sed 's/\t/|/' | sort | joint - $t.x3 | cut -f2- | sort -k2,2g 
+cat $t.x1 | sed 's/\t/|/' | sort | join -t'	' - $t.x3 | cut -f2- | sort -k2,2g 
 
 # cleanup
 rm -f ${t}.* $t
