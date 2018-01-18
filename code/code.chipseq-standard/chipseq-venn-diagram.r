@@ -19,10 +19,15 @@ if (length(inputs) < 2 || length(inputs) > 5) {
 suppressPackageStartupMessages(library(ChIPseeker))
 suppressPackageStartupMessages(library(tools))
 
-files=list()
+files = list()
 for (i in 1:length(inputs)){
-  files=append(files, list(inputs[i]))
-  names(files)[i]=basename(dirname(inputs[i]))
+  # check file size and skip input files that are too short (will cause error in readPeakFile)
+  fileconn = file(inputs[i], open = "r")
+  input_length <- length(readLines(fileconn))
+  if (input_length > 10) {
+    files <- append(files, list(inputs[i]))
+    names(files)[length(files)] <- basename(dirname(inputs[i]))
+  }
 }
 
 if(!dir.exists(opt$outputdir)){dir.create(opt$outputdir)}

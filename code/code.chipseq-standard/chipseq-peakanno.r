@@ -5,17 +5,22 @@ Rscript chipseq-peakanno.r [OPTIONS] PEAK-FILE
 "
 suppressPackageStartupMessages(library(optparse))
 option_list <- list(
-  make_option(c("-o","--outputdir"),default="./", help="output directory."),
-  make_option(c("-d","--promoter"),default="./", help="extending promoter upstream and downstream by nt."),
-  make_option(c("-g","--genome"),default="./", help="annotation genome")
+  make_option(c("-o","--outputdir"), default = "./", help = "output directory."),
+  make_option(c("-d","--promoter"), default = "./", help = "extending promoter upstream and downstream by nt."),
+  make_option(c("-g","--genome"), default = "./", help = "annotation genome")
 )
 arguments = parse_args(args=commandArgs(trailingOnly=T), OptionParser(usage=usage,option_list=option_list), positional_arguments=c(0,Inf))
 opt = arguments$options
 inputs = arguments$args
-if (length(inputs)!=1) { write(paste("USAGE: ",usage,sep=''),stderr()); quit(save='no') }
+if (length(inputs)!=1) { write(paste0("USAGE: ", usage), stderr()); quit(save = 'no') }
 
-
-
+# exit if input file is too short (will cause error in readPeakFile)
+fileconn = file(inputs, open = "r")
+input_length <- length(readLines(fileconn))
+if (input_length < 10) {
+  write("too few peaks so skipping", stderr())
+  quit(save = 'no')
+}
 
 if(grepl("hg19|hg38",opt$genome)){
   TXDB_NAME = paste0("TxDb.Hsapiens.UCSC.",opt$genome,".knownGene");
@@ -30,8 +35,8 @@ if(grepl("hg19|hg38",opt$genome)){
 suppressPackageStartupMessages(library(ChIPseeker))
 suppressPackageStartupMessages(library(clusterProfiler))
 suppressPackageStartupMessages(library(TXDB_NAME,character.only=TRUE))
-txdb <- get(TXDB_NAME)
 
+txdb <- get(TXDB_NAME)
 
 peak <- readPeakFile(inputs)
 

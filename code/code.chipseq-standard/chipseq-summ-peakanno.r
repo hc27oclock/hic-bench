@@ -33,13 +33,23 @@ suppressPackageStartupMessages(library(TXDB_NAME,character.only=TRUE))
 txdb <- get(TXDB_NAME)
 
 
-files=list()
+files = list()
 for (i in 1:length(inputs)){
-  files=append(files, list(inputs[i]))
-  names(files)[i]=basename(dirname(inputs[i]))
+  # check file size and skip input files that are too short (will cause error in readPeakFile)
+  fileconn = file(inputs[i], open = "r")
+  input_length <- length(readLines(fileconn))
+  if (input_length > 10) {
+    files <- append(files, list(inputs[i]))
+    names(files)[length(files)] <- basename(dirname(inputs[i]))
+  }
 }
 
-if(!dir.exists(opt$outputdir)){dir.create(opt$outputdir)}
+if (length(files) == 0) {
+  write("all files have too few peaks so skipping", stderr())
+  quit(save = 'no')
+}
+
+if (!dir.exists(opt$outputdir)) { dir.create(opt$outputdir) }
 
 
 #promoter <- getPromoters(TxDb=txdb, upstream=as.numeric(opt$promoter), downstream=as.numeric(opt$promoter))
