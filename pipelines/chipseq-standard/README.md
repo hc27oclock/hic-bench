@@ -15,8 +15,8 @@ This guide assumes that you have cloned this repository to the location `~/hic-b
 cd ~/hic-bench
 git pull
 
-# create project directory
-~/hic-bench/code/code.main/pipeline-new-analysis chipseq-standard /path/to/<project_directory>
+# create a new project directory
+~/hic-bench/code/code.main/pipeline-new-analysis chipseq-standard </path/to/project_directory>
 
 # set input files
 cd /path/to/<project_directory>
@@ -32,23 +32,16 @@ cd inputs
 cd /path/to/<project_directory>
 ./run.dry
 ./code.main/pipeline-execute <project_name> <name@domain.edu>
-
 ```
 
-# Notes
-
-## MACS
-- broad = histone
-- narrow = everything else
-
-
 # Full Walkthrough
+
 ## 0. Create a new analysis
 
 If a new analysis project has not already been created, do so with the following command:
 
 ```bash
-~/hic-bench/code/code.main/pipeline-new-analysis chipseq-standard /path/to/<project_directory>
+~/hic-bench/code/code.main/pipeline-new-analysis chipseq-standard </path/to/project_directory>
 ```
 
 Unless otherwise stated, all following steps should be excuted from within the `<project_directory>` you have just created. 
@@ -75,7 +68,6 @@ Within the corresponding `inputs/fastq` or `inputs/bam` directory, subdirectorie
 
 Each subdirectory should contain all fastq or bam files to be used for that sample through the analysis pipeline. Symlinks can be used if the files are not contained in the same location as the project analysis directory, and are preferable to save storage space. 
 
-
 ## 2. Create project sample sheet
 
 A sample sheet must be created for the analysis project. Run the follow command to do so:
@@ -83,19 +75,29 @@ A sample sheet must be created for the analysis project. Run the follow command 
 ```bash
 cd inputs
 ./code/create-sample-sheet.tcsh <genome> <fragment-size>
-cd ..
 ```
 
-Where `<genome>` is `hg19`, `hg38`, etc.. 
-The `fragment-size` should be a numeric argument such as `300`, representing the library size of the sequencing sample. 
-After creation of the sample sheet, output in `inputs/sample-sheet.tsv`, a manual review process is required to match the correct control or input samples with experimental samples, verify proper grouping names, files, and other entries. 
-If not entered prior, `fragment-size` and `chip` columns should be filled in for each sample. 
-This process can be completed within Microsoft Excel, but saving the file in Excel should be avoided due to the introduction of formatting errors by Excel. 
+This scans the `inputs/fastq` directory. If you need to modify the sample names, modify them directly in the `inputs/fastq` first. The sample names in the sample sheet must match the sample names in `inputs/fastq`.
 
+The `<genome>` is `hg19`, `mm10`, etc.
+
+The `fragment-size` should be a numeric argument such as `300`, representing the library size of the sequencing sample. 
 Typical fragmentation sizes are 150 for histone marks, and 400 for transcription factors.
 
-If editing in Excel or in Windows, run `mac2unix` or `dos2unix` on the sample sheet.
+After creation of the sample sheet (should be in `inputs/sample-sheet.tsv`), a manual review process is required to match the correct control or input samples with experimental samples, verify proper grouping names, files, and other entries. 
 
+If editing in Excel, clean up the sample sheet to get rid of problematic characters that get introduced:
+
+```bash
+mac2unix sample-sheet.tsv
+sed -i 's/"//g' sample-sheet.tsv
+```
+
+Return to the main project directory:
+
+```bash
+cd ..
+```
 
 ## 3. Pipeline execution
 
@@ -110,6 +112,20 @@ Run the pipeline with:
 ```bash
 ./code.main/pipeline-execute <project_ID> <name@domain.edu>
 ```
+
+The pipeline will submit jobs for the various sub-processes. You can monitor the progress with:
+
+```bash
+watch qstat
+```
+
+### Confirming successful execution
+
+After all the pipeline processes are no longer running, it's important to check for errors. There should be a `*.e*` file (stderr) in the main project directory that displays a brief summary. Usually, only the last few lines are relevant, so you can scroll to the bottom. If the pipeline did not complete successfully, it will specify which step encountered an error.
+
+Each step generates output in `pipeline/<step>`. If there was an error, there is a file written in the `errors` sub-directory. That will tell you which sample had a problem, but the specific error message may not be helpful.
+
+In the `results` sub-directory, there are additional sub-directories for each sample. Within each, the `job.err` file will have the error with relevant context.
 
 ## 4. Compile Report
 
