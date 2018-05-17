@@ -13,7 +13,7 @@ inp_matrix = np.loadtxt(inp_file)
 
 # filter matrix by row mean
 m = np.mean(inp_matrix,axis=1)
-cutoff = np.sort(m)[int(len(m)*percent_cutoff)]
+cutoff = np.sort(m)[int(round(len(m)*percent_cutoff))]
 i = np.where(m<cutoff)
 inp_matrix[i,:] = 0
 inp_matrix[:,i] = 0
